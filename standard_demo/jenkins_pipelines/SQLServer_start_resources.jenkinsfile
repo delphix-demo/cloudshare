@@ -1,0 +1,46 @@
+//
+// Pipeline to start Sqlserver Resources - DCT version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('enable Sqlserver environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit enable_environment environment_id='Sqlserver_Target'"
+            sh "/home/delphix/dct-toolkit enable_environment environment_id='Sqlserver_Source'"
+            sh "exit 0"
+         }
+      }
+      stage('start Sqlserver DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit enable_dsource dsource_id='Suitecrm_master'"
+            sh "exit 0"
+         }
+      }
+      stage('start Sqlserver VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Start_MASK: {
+                      sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Suitecrm_MASK'"
+                      sh "exit 0"
+                    },
+                Start_QA: {
+                      sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Suitecrm_QA'"
+                      sh "exit 0"
+                    },
+                Start_DEV: {
+                      sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Suitecrm_DEV'"
+                      sh "exit 0"
+                }
+            )
+         }
+      }
+   }
+}

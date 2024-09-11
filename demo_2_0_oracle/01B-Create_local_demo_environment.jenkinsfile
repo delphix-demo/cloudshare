@@ -1,0 +1,101 @@
+//
+// Pipeline to create local Demo environment - Oracle no Multi-tenant
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+CAMBIARE STEP CARICAMENTO E VISUALIZZAZIONE DATI
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Link Dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit link_oracle_database source_id='orcl' name='orcl_master' group_id='Source' environment_user_id='delphix' --link_now
+               sleep 30
+            """
+         }
+      }
+      stage('Create local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='orcl_master' name='orclmask' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='MaskGC' oracle_instance_name='orclmask' mount_point='/mnt/provision' 
+            """
+         }
+      }
+      stage('Run Masking job') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                sleep 30
+               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Masking_patients_oracle' 
+            """
+         }
+      }   
+      stage('Snap local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit snapshot_vdb vdb_id='orclmask'                       
+            """
+         }
+      }   
+      stage('Show masked rows MASK vs BUGFIX') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               psql -p 5445 -h 10.160.1.74 -U postgres -d delphixdb -c "select * from public.patient limit 5; select * from public.patient_visit limit 5; " 
+               psql -p 5444 -h 10.160.1.74 -U postgres -d delphixdb -c "select * from public.patient limit 5; select * from public.patient_visit limit 5; "              
+            """
+         }
+      } 
+      stage('Create local QA VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='orclmask' name='orclqa' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='QA' oracle_instance_name='orclqa' mount_point='/mnt/provision' 
+         }
+      }  
+      stage('Create local DEV VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='orclmask' name='orcldev' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='DEV' oracle_instance_name='orcldev' mount_point='/mnt/provision' 
+            """
+         }
+      }
+      stage('Generate synthetic data for DEV') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/fb256a81-9834-4262-8d19-c770f6518953/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_data_DEV.csv 
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/2f8009cf-a3d3-4a42-a942-9c512c145897/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_visit_data_DEV.csv                
+            """
+         }
+      }   
+      stage('Load synthetic data for DEV') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               psql -p 6432 -h 10.160.1.74 -U postgres -d delphixdb -c "truncate table patient,patient_visit restart identity" 
+               psql -p 6432 -h 10.160.1.74 -U postgres -d delphixdb -c "COPY patient(address,first_name,last_name,dob,ssn,marital_status,city,state,mail,zipcode,phone) FROM '/var/lib/pgsql/bm_patient_data_DEV.csv' DELIMITER ',' CSV HEADER;" 
+               psql -p 6432 -h 10.160.1.74 -U postgres -d delphixdb -c "COPY patient_visit(patient_id,visit_date,copay,primary_reason,notes) FROM '/var/lib/pgsql/bm_patient_visit_data_DEV.csv' DELIMITER ',' CSV HEADER;" 
+            """
+         }
+      } 
+      stage('Show QA vs DEV rows') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               psql -p 6432 -h 10.160.1.74 -U postgres -d delphixdb -c "select * from public.patient limit 3; select * from public.patient_visit limit 3; " 
+               psql -p 7432 -h 10.160.1.74 -U postgres -d delphixdb -c "select * from public.patient limit 3; select * from public.patient_visit limit 3; "             """
+         }
+      }   
+   }
+}

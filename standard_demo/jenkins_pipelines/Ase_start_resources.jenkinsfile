@@ -1,0 +1,42 @@
+//
+// Pipeline to start Ase Resources
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Ruben Catarrunas (ruben.catarrunas@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('enable Ase environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Ase_Target' -action enable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Ase_Source' -action enable"
+         }
+      }
+      stage('start Ase DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action enable -name 'Ase_1_master'"
+            sh "exit 0"
+         }
+      }
+      stage('start Ase VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Start_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action enable -name 'Ase_1_MASK'"
+                    },
+                Start_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Ase QA' -action enable"
+                    },
+                Start_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Ase DEV' -action enable"
+                }
+            )
+         }
+      }
+   }
+}

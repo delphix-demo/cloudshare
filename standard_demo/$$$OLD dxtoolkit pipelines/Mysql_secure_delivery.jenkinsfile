@@ -1,0 +1,39 @@
+//
+// Pipeline for Secure Delivery of Mysql datasource
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+// TODO:   ADD MASKING STEP
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Snap Production') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'Mysql_master'"
+         }
+      }
+      stage('Refresh MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'Mysql_MASK'"
+         }
+      }
+      stage('Refresh DEV and QA') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Mysql QA' -action refresh"
+                    },
+                Refresh_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Mysql DEV' -action refresh"
+                }
+            )
+         }
+      }
+   }
+}

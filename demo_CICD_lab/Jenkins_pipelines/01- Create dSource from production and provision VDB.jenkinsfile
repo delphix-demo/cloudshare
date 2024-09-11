@@ -1,0 +1,21 @@
+node {
+  def remote = [:]
+  remote.name = 'oracle_target'
+  remote.host = '10.160.0.20'
+  remote.user = 'oracle'
+  remote.password = 'delphix'
+  remote.allowAnyHosts = true
+    stage('Start database') {
+        sshCommand remote: remote, command: "source /home/oracle/start_db19.sh"
+    }
+        stage('Discover Environment') {
+        sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_create_env -d myengine -envname singlenode -envtype unix -host 10.160.0.20 -username delphix -authtype password -password delphix -toolkitdir '/home/delphix'"
+    }
+    stage('Create DSource') {
+        sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_dsource -d myengine -type oracle -sourcename db19 -sourceinst /u01/app/oracle/product/19.0.0/dbhome_1 -sourceenv singlenode -source_os_user delphix -dbuser delphix -password delphix -group 'Oracle 19c Sources' -creategroup -dsourcename db19 -action create"
+    }
+    stage('Provision VDB') {
+        sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_provision_vdb -d myengine -sourcename db19 -dbname vdb1 -targetname vdb1 -group 'Oracle 19c Virtual Databases' -creategroup -environment singlenode -type oracle -envinst '/u01/app/oracle/product/19.0.0/dbhome_1' -maskedbyscript"
+    }
+   }
+   

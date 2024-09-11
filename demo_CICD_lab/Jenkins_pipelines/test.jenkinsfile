@@ -1,0 +1,50 @@
+@Library('delphix_pipeline') _
+
+pipeline {   
+
+    agent none
+
+    environment {
+        DLPX_ENGINE = "10.160.0.10"
+        DLPX_TARGET = "10.160.0.253"
+        DLPX_USER = "admin"
+        DLPX_PASSWORD = "delphix"
+        DXTOOLKIT_CONF = "/config/dxtools.conf"
+    }
+    
+    stages { 
+
+        stage('Prepare data catalog') {
+            stages {
+                stage('Prepare 1pctdata') {
+                    agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+                    }
+                    steps {
+                        sh """
+                        cat <<FOE>/config/presnap.hook1
+                        #!/bin/sh
+        
+                        sqlplus "/ AS SYSDBA" <<-EOF
+                        whenever sqlerror exit 2;
+                        spool \$DELPHIX_MOUNT_PATH/\$DELPHIX_DATABASE_UNIQUE_NAME/datafile/presnapshot.out replace
+                        shutdown immediate
+                        startup mount
+                        alter database open read only;
+                        exec dbms_pdb.describe(pdb_descr_file=>'\$DELPHIX_MOUNT_PATH/\$DELPHIX_DATABASE_UNIQUE_NAME/datafile/delphix_plugin.xml');
+                        exit;
+                        EOF
+        
+                        FOE 
+                        """.stripIndent()
+                        sh "ls -l /config/presnap.hook1"
+                    }   
+                }
+            }
+        }
+    }
+}

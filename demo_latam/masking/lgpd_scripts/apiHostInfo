@@ -1,0 +1,5 @@
+# Local Instance
+MASKING_ENGINE=192.168.15.178
+
+# CloudShare
+#MASKING_ENGINE=uvo1shpwko1wyifpt4n.vm.cld.sr

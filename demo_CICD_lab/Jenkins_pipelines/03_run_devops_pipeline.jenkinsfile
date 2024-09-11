@@ -1,0 +1,227 @@
+properties([parameters([extendedChoice(multiSelectDelimiter: ',', name: 'Choose_data', quoteValue: false, saveJSONParameterToFile: false, type: 'PT_RADIO', value: 'freshcopy,1pct,10pct,syntetic', visibleItemCount: 4)])])
+
+pipeline {
+
+    agent none
+
+    environment {
+        DLPX_ENGINE = "10.160.0.10"
+        DLPX_CRED = credentials('delphix_engine_credentials')
+        DLPX_TEMPLATE = "Myapp_template"
+        DLPX_CONTAINER = "pipedb"
+    }
+
+    stages {
+        stage('Checkout SCM') {
+            agent {
+                label 'oracle_target'
+            }
+            steps {
+                checkout([
+                $class: 'GitSCM',
+                branches: [[name: 'main']],
+                userRemoteConfigs: [[
+                    url: 'oracle@localhost:/home/oracle/pipelinedemo',
+                    credentialsId: '',
+                ]]
+                ])
+            }
+        }
+
+
+        stage('Configure db pipeline interface') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh '/dxtoolkit/dx_config -convert todxconf -text hostname,$DLPX_ENGINE,80,$DLPX_CRED_USR,$DLPX_CRED_PSW,true,http -configfile /config/dxtools.conf'
+                sh '/dxtoolkit/dx_get_appliance -configfile /config/dxtools.conf'
+            }
+        }
+        
+        stage('Configure pipedb with proper data') {
+            parallel {
+                stage('freshcopy - Refresh from production') {
+                    when { expression { params.Choose_data == "freshcopy" } }            
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_ctl_js_container -action refresh  -container_name $DLPX_CONTAINER -template_name $DLPX_TEMPLATE"
+                    }
+                }
+                stage('1pct - Use 1 pct of data') {
+                    when { expression { params.Choose_data == "1pct" } }            
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_ctl_js_container -action restore -timestamp 1pctdata  -container_name $DLPX_CONTAINER -template_name $DLPX_TEMPLATE"
+                    }
+                }
+                stage('10pct - Use 10 pct of data') {
+                    when { expression { params.Choose_data == "10pct" } }            
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_ctl_js_container -action restore -timestamp 10pctdata  -container_name $DLPX_CONTAINER -template_name $DLPX_TEMPLATE"
+                    }
+                }
+                stage('syntetic - Use syntetic data') {
+                    when { expression { params.Choose_data == "syntetic" } }            
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_ctl_js_container -action restore -timestamp syntetic  -container_name $DLPX_CONTAINER -template_name $DLPX_TEMPLATE"
+                    }
+                }
+            }
+        }
+
+
+
+
+        stage('Install utPLSQL') {
+            agent {
+                label 'oracle_target'
+            }
+            steps {
+                sh """
+                export ORAENV_ASK=NO
+                export ORACLE_SID=pipedb
+                . oraenv
+                cd /home/oracle/utPLSQL/source/
+                sqlplus / as sysdba @uninstall_all.sql UT3
+                sqlplus / as sysdba @install_headless.sql
+                """
+            }
+        }
+        stage('Deploy PLSQL') {
+            agent {
+                label 'oracle_target'
+            }
+            steps {
+                sh """
+                export ORAENV_ASK=NO
+                export ORACLE_SID=pipedb
+                . oraenv
+                cd $WORKSPACE
+                sqlplus demo2/demo2 @DEMO_BILL.pls
+                sqlplus demo2/demo2 @DEMO_BILL.plb
+                sqlplus demo2/demo2 @TEST_BILLING.pls
+                sqlplus demo2/demo2 @TEST_BILLING.plb
+
+                """
+            }
+        }
+
+        stage('Before DEMO_BILL test - savepoint') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh """
+                /dxtoolkit/dx_ctl_js_bookmarks -action create -bookmark_time latest -bookmark_name "${JOB_NAME}-${BUILD_NUMBER}-b-demo_bill"  -container_name pipedb -template_name Myapp_template
+                /dxtoolkit/dx_ctl_js_bookmarks -bookmark_name "${JOB_NAME}-${BUILD_NUMBER}-b-demo_bill" -action share
+                """
+            }
+        }
+
+        stage('Run test DEMO_BILL') {
+            agent {
+                label 'oracle_target'
+            }
+            steps {
+                sh """        
+                /home/oracle/utPLSQL-cli/bin/utplsql run demo2/demo2@127.0.0.1/pipedb
+                """
+            }
+        }
+
+        stage('After DEMO_BILL test - savepoint') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh """
+                /dxtoolkit/dx_ctl_js_bookmarks -action create -bookmark_time latest -bookmark_name "${JOB_NAME}-${BUILD_NUMBER}-a-demo_bill"  -container_name pipedb -template_name Myapp_template
+                /dxtoolkit/dx_ctl_js_bookmarks -bookmark_name "${JOB_NAME}-${BUILD_NUMBER}-a-demo_bill" -action share
+                """
+            }
+        }
+
+        stage('Before next test - savepoint') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh """
+                /dxtoolkit/dx_ctl_js_bookmarks -action create -bookmark_time latest -bookmark_name "${JOB_NAME}-${BUILD_NUMBER}-b-next"  -container_name pipedb -template_name Myapp_template
+                /dxtoolkit/dx_ctl_js_bookmarks -bookmark_name "${JOB_NAME}-${BUILD_NUMBER}-b-next" -action share
+                """
+            }
+        }
+
+        stage('Run test 1') {
+            agent {
+                label 'oracle_target'
+            }
+            steps {
+                sh """
+                /home/oracle/sqlcl/bin/sql demo/demo@localhost/pipedb @/home/oracle/test/test.sql 1
+                """
+            }
+        }
+
+        stage('After next test - savepoint') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh """
+                /dxtoolkit/dx_ctl_js_bookmarks -action create -bookmark_time latest -bookmark_name "${JOB_NAME}-${BUILD_NUMBER}-a-next"  -container_name pipedb -template_name Myapp_template
+                /dxtoolkit/dx_ctl_js_bookmarks -bookmark_name "${JOB_NAME}-${BUILD_NUMBER}-a-next" -action share
+                """
+            }
+        }
+
+    }
+}

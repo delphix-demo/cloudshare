@@ -1,0 +1,70 @@
+//
+// Pipeline to prepare Source DB for Demo
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create source DB tables') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb <<EOF 
+DROP TABLE IF EXISTS patient, patient_visit CASCADE; 
+CREATE TABLE patient( 
+   patient_id INT GENERATED ALWAYS AS IDENTITY, 
+   first_name VARCHAR(80) NOT NULL, 
+   last_name VARCHAR(80) NOT NULL, 
+   dob DATE NOT NULL, 
+   ssn VARCHAR(20) NOT NULL, 
+   marital_status VARCHAR(20) NOT null, 
+   address VARCHAR(255) NOT NULL, 
+   city VARCHAR(255) NOT NULL, 
+   state VARCHAR(50) NOT NULL, 
+   zipcode VARCHAR(5) NOT NULL, 
+   mail VARCHAR(200) NOT NULL, 
+   PHONE VARCHAR(15) NOT null, 
+   PRIMARY KEY(patient_id) 
+); 
+
+CREATE TABLE patient_visit( 
+   patient_visit_id INT GENERATED ALWAYS AS IDENTITY, 
+   patient_id INT NOT NULL, 
+   visit_date DATE NOT NULL, 
+   copay numeric NOT NULL, 
+   primary_reason VARCHAR(500) NOT NULL, 
+   notes VARCHAR(500) NOT NULL, 
+   CONSTRAINT FK_patient_visit FOREIGN KEY(patient_id) 
+        REFERENCES patient(patient_id) 
+); 
+EOF
+"""
+         }
+      }
+      stage('Generate synthetic data for Source DB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/916c30d9-767c-405b-9e89-337c110c4d15/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_data.csv 
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/377a5669-8e5f-41de-a84e-d8aa4e83c90f/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_visit_data.csv 
+            """
+         }
+      }       
+      stage('Load Source DB data') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "COPY patient(address,first_name,last_name,dob,ssn,marital_status,city,state,mail,zipcode,phone) FROM '/var/lib/pgsql/bm_patient_data.csv' DELIMITER ',' CSV HEADER;" 
+               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "COPY patient_visit(patient_id,visit_date,copay,primary_reason,notes) FROM '/var/lib/pgsql/bm_patient_visit_data.csv' DELIMITER ',' CSV HEADER;"
+               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "select 'Patient'as Table, count(*) as rows from public.patient union all select 'Patient_visit' as Table, count(*) as rows from public.patient_visit;"            
+               """
+         }
+      }
+   }
+}

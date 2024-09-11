@@ -1,0 +1,38 @@
+//
+// Pipeline to Create Mysql Self-Service Resources - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create Mysql_MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            /home/delphix/dct-toolkit provision_vdb_by_snapshot appdata name=Mysql_MASK --auto_select_repository source_data_id=Mysql_master environment_id=Oracle_Target target_group_id='MaskGC' appdata_source_params='{"baseDir": "/usr","config_settings_prov": [],"mPath": "/mnt/provision/mysql_MASK","port": 3346,"serverId": 201,"vdbPass": "Delphix_123!","vdbUser": "root"}'
+            """
+         }
+      }
+      stage('Create Mysql DEV and QA VDB from MASK') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_DEV: {
+                     sh """
+                     /home/delphix/dct-toolkit provision_vdb_by_snapshot appdata name=Mysql_DEV --auto_select_repository source_data_id=Mysql_MASK environment_id=Oracle_Target target_group_id='DEV' appdata_source_params='{"baseDir": "/usr","config_settings_prov": [],"mPath": "/mnt/provision/mysql_DEV","port": 3356,"serverId": 301,"vdbPass": "Delphix_123!","vdbUser": "root"}'
+                     """
+                    },
+                Create_QA: {
+                     sh """
+                     /home/delphix/dct-toolkit provision_vdb_by_snapshot appdata name=Mysql_QA --auto_select_repository source_data_id=Mysql_MASK environment_id=Oracle_Target target_group_id='QA' appdata_source_params='{"baseDir": "/usr","config_settings_prov": [],"mPath": "/mnt/provision/mysql_QA","port": 3366,"serverId": 401,"vdbPass": "Delphix_123!","vdbUser": "root"}'
+                     """
+                    }
+            )
+         }
+      }
+   }
+}

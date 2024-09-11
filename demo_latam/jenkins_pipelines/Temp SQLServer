@@ -1,0 +1,13 @@
+    stage('install sqlcmd and bcp on Linux') {
+         agent { label 'devops' }
+         steps {
+            sh "sudo curl https://packages.microsoft.com/config/rhel/8/prod.repo > /etc/yum.repos.d/msprod.repo"
+            sh "sudo yum install mssql-tools unixODBC-devel"
+            sh "sudo yum check-update"
+            sh "sudo yum update mssql-tools"
+            sh "echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bash_profile""
+            sh "echo 'export PATH="$PATH:/opt/mssql-tools/bin"' >> ~/.bashrc""
+            sh "source ~/.bashrc"
+
+         }
+      }

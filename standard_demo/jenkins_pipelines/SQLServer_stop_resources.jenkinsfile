@@ -1,0 +1,42 @@
+//
+// Pipeline to stop Sqlserver Resources - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('stop Sqlserver DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit disable_dsource dsource_id='Suitecrm_master'"
+            sh "exit 0"
+         }
+      }
+      stage('stop Sqlserver VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Stop_MASK: {
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Suitecrm_MASK'"
+                    },
+                Stop_QA: {
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Suitecrm_QA'"
+                    },
+                Stop_DEV: {
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Suitecrm_DEV'"
+                }
+            )
+         }
+      }
+      stage('Disable Sqlserver environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit disable_environment environment_id='Sqlserver_Target'"
+            sh "/home/delphix/dct-toolkit disable_environment environment_id='Sqlserver_Source'"
+         }
+      }
+   }
+}

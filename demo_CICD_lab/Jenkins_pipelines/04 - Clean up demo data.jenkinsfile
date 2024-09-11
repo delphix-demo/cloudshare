@@ -1,0 +1,48 @@
+node {
+  def remote = [:]
+  remote.name = 'oracle_target'
+  remote.host = '10.160.0.20'
+  remote.user = 'oracle'
+  remote.password = 'delphix'
+  remote.allowAnyHosts = true
+    stage('Destroy Self Service Containers') {
+     parallel 'Container1': {
+         stage('Container1') {
+               sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_container -d myengine -action delete -container_name container1 -dropvdb yes"
+         }
+         stage('Container2') {
+               sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_container -d myengine -action delete -container_name container2 -dropvdb yes"
+         }
+         stage('Container3') {
+               sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_container -d myengine -action delete -container_name container3 -dropvdb yes"
+         }
+         stage('Container4') {
+               sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_container -d myengine -action delete -container_name container4 -dropvdb yes"
+         }
+         stage('Container5') {
+               sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_container -d myengine -action delete -container_name container5 -dropvdb yes"
+         }
+     }
+      }
+      stage('Destroy Self Service Template') {
+         sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_template -d myengine -action delete -template_name Masked_template"
+      }
+         stage('Destroy VDB1') {
+         sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_remove_db -d myengine -name vdb1 -skip"
+      }
+      stage('Destroy DSource') {
+         sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_remove_db -d myengine -name db19 -skip"
+      }
+      stage('Destroy Environment') {
+        sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_remove_env -d myengine -name singlenode -skip"
+      }
+      stage('Destroy Environment in the masking engine') {
+        sshCommand remote: remote, command: " /home/oracle/dxmc/dxmc environment delete --envname \"Production App\""
+      }
+      stage('Destroy Application in the masking engine') {
+        sshCommand remote: remote, command: "/home/oracle/dxmc/remove_app.sh 10.160.0.10 Admin Admin-12 \"oracle app2\" "
+      }
+      stage('Stop database') {
+          sshCommand remote: remote, command: "source /home/oracle/stop_db19.all"
+        }       
+    }

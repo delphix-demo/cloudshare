@@ -1,0 +1,120 @@
+pipeline {   
+
+    agent none
+
+    environment {
+        DLPX_ENGINE = "10.160.0.10"
+        DLPX_TARGET = "10.160.0.20"
+        DLPX_USER = "admin"
+        DLPX_PASSWORD = "delphix"
+        DXTOOLKIT_CONF = "/config/dxtools.conf"
+    }
+
+
+    stages { 
+
+        stage('Prepare docker') {
+            agent {
+                label "oracle_target"
+            }
+            steps {
+                sh """
+                sudo systemctl restart docker 
+                """
+            }
+        }
+        
+        stage('Configure Engine') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh '/dxtoolkit/dx_config -convert todxconf -text myengine,$DLPX_ENGINE,80,$DLPX_USER,$DLPX_PASSWORD,true,http -configfile $DXTOOLKIT_CONF'
+                sh '/dxtoolkit/dx_get_appliance -configfile $DXTOOLKIT_CONF'
+            }
+        }
+
+
+        stage('Start database') {
+            agent {
+                label "oracle_target"
+            }
+            steps {
+                sh """
+                export JENKINS_NODE_COOKIE=dontKillMe 
+                /home/oracle/start_db19.sh 
+                """
+            }
+        }
+
+        stage('Discover Environment') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_create_env -d myengine -envname singlenode -envtype unix -host $DLPX_TARGET -username delphix -authtype password -password delphix -toolkitdir '/home/delphix'"
+            }
+        }
+
+        stage('Create DSource') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_ctl_dsource -d myengine -type oracle -sourcename db19 -sourceinst /u01/app/oracle/product/19.0.0/dbhome_1 -sourceenv singlenode -source_os_user delphix -dbuser delphix -password delphix -group 'Oracle 19c Sources' -creategroup -dsourcename db19 -action create"
+            }
+        }
+
+        stage('Provision VDB') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_provision_vdb -d myengine -sourcename db19 -dbname vdb1 -targetname vdb1 -group 'Oracle 19c Virtual Databases' -creategroup -environment singlenode -type oracle -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'"
+            }
+        }
+
+        stage('Create Self Service Template') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_ctl_js_template -d myengine -source 'Oracle 19c Sources,db19,db19,1'  -action create -template_name Myapp_template"
+            }
+        }
+
+        stage('Create Self Service Container') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_ctl_js_container -d myengine -action create -container_def 'Oracle 19c Virtual Databases,vdb1' -container_name container1 -template_name Myapp_template -container_owner admin -dontrefresh"
+            }
+        }
+
+    }
+}

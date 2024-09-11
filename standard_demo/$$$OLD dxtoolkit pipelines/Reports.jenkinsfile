@@ -1,0 +1,39 @@
+//
+// Delphix Reports
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+// 
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Delphix storage capacity report and export') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_get_capacity -d democde1 "
+            sh "/home/delphix/dxtoolkit2/dx_get_capacity_history -d democde1 "
+            sh "/home/delphix/dxtoolkit2/dx_get_capacity_history -d democde1 -format csv"
+         }
+      }
+       stage('Print DB hierarchies') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_get_hierarchy -d democde1 -printhierarchy p2c"
+         }
+      }
+      stage('DB List for masked/unmasked DB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_get_db_env -d democde1 -masking"
+         }
+      }
+      stage('Export DB list as CSV file') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2//dx_get_db_env -d democde1 -format csv"
+         }
+      }
+   }
+}

@@ -1,0 +1,56 @@
+Pessoa:
+  table_name: 'pessoa'
+  plural: False
+  columns:
+    des2_pessoa:
+      data_type: 'String'
+      data_size: 80
+      nullable: False
+      unique: False
+      doc: 'first_name-pt_BR'
+      identity: True
+    cod_pessoa:
+      data_type: 'String'
+      data_size: 20
+      nullable: False
+      doc: 'cpf-pt_BR'
+      primary_key: True
+    des_pessoa:
+      data_type: 'String'
+      data_size: 20
+      nullable: False
+      doc: 'cpf-pt_BR'
+  relationships:
+    servidores:
+      related_class: 'Servidor'
+      back_populates: 'pessoa'
+      lazy: 'dynamic'
+      type: child
+Servidor:
+  table_name: 'servidor'
+  plural: 'Servidores'
+  columns:
+    cod_servidor:
+      data_type: 'Integer'
+      sequence: 'servidor_seq'
+      doc: 'ssn-pt_BR'
+      primary_key: True
+    des_servidor:
+      data_type: 'String'
+      data_size: 80
+      nullable: False
+      unique: False
+      #doc: 'first_name-pt_BR'
+    cod_pessoa:
+      data_type: 'String'
+      data_size: 20
+      foreign_key: 'pessoa.cod_pessoa'
+      index: True
+      nullable: False
+      unique: False
+      doc: 'cpf-pt_BR'
+  relationships:
+    pessoa:
+      related_class: 'Pessoa'
+      back_populates: 'servidores'
+      type: parent

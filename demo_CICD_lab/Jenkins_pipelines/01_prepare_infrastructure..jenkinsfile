@@ -1,0 +1,265 @@
+pipeline {   
+
+    agent none
+
+    environment {
+        DLPX_ENGINE = "10.160.0.10"
+        DLPX_TARGET = "10.160.0.20"
+        DLPX_USER = "admin"
+        DLPX_PASSWORD = "delphix"
+        DXTOOLKIT_CONF = "/config/dxtools.conf"
+    }
+
+
+    stages { 
+
+        stage('Prepare docker') {
+            agent {
+                label "oracle_target"
+            }
+            steps {
+                sh """
+                sudo systemctl restart docker 
+                """
+            }
+        }
+        
+        stage('Configure connection to Engine') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh '/dxtoolkit/dx_config -convert todxconf -text myengine,$DLPX_ENGINE,80,$DLPX_USER,$DLPX_PASSWORD,true,http -configfile $DXTOOLKIT_CONF'
+                sh '/dxtoolkit/dx_get_appliance -configfile $DXTOOLKIT_CONF'
+            }
+        }
+
+        stage('Start database') {
+            agent {
+                label "oracle_target"
+            }
+            steps {
+                sh """
+                export JENKINS_NODE_COOKIE=dontKillMe 
+                /home/oracle/start_db19.sh 
+                """
+            }
+        }
+
+        stage('Discover Environment') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_create_env -d myengine -envname singlenode -envtype unix -host $DLPX_TARGET -username delphix -authtype password -password delphix -toolkitdir '/home/delphix'"
+            }
+        }
+
+        stage('Create DSource') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_ctl_dsource -d myengine -type oracle -sourcename db19 -sourceinst /u01/app/oracle/product/19.0.0/dbhome_1 -sourceenv singlenode -source_os_user delphix -dbuser delphix -password delphix -group 'Oracle 19c Sources' -creategroup -dsourcename db19 -action create"
+            }
+        }
+
+
+        stage('Provision  VDBs') {
+            parallel {
+                stage('pipedb') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_provision_vdb -d myengine -sourcename db19 -dbname pipedb -targetname pipedb -group 'Oracle 19c Virtual Databases' -creategroup -environment singlenode -type oracle -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'"
+                    }
+                }
+            stage('fixerdb') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_provision_vdb -d myengine -sourcename db19 -dbname fixerdb -targetname fixerdb -group 'Oracle 19c Virtual Databases' -creategroup -environment singlenode -type oracle -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'"
+                    }
+                }
+            }
+        }
+
+        stage('Create Self Service Template') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_ctl_js_template -d myengine -source 'Oracle 19c Sources,db19,db19,1'  -action create -template_name Myapp_template"
+            }
+        }
+
+
+        stage('Create bugfixer user') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh """
+                echo "C,bugfixer,,,c@c.com,,,,NATIVE,,delphix,N,Y" > /config/users.csv
+                /dxtoolkit/dx_ctl_users -d myengine -file /config/users.csv
+                """
+            }
+        }
+
+
+        stage('Create Self Service Containers') {
+            parallel {
+                stage('pipedb') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_ctl_js_container -d myengine -action create -container_def 'Oracle 19c Virtual Databases,pipedb' -container_name pipedb -template_name Myapp_template -container_owner admin -dontrefresh"
+                    }
+                }
+                stage('fixerdb') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_ctl_js_container -d myengine -action create -container_def 'Oracle 19c Virtual Databases,fixerdb' -container_name fixerdb -template_name Myapp_template -container_owner bugfixer -dontrefresh"
+                    }
+                }
+            }
+        }
+
+        stage('Prepare data catalog') {
+            stages {
+                stage('Prepare 10pctdata') {
+                    agent {
+                        label "oracle_target"
+                    }
+                    steps {
+                        sh """
+                        /home/oracle/sqlcl/bin/sql demo2/demo2@localhost/pipedb << EOF
+                        create table demo_customer_new as select * from demo_customer sample(10);
+                        drop table demo_customer;
+                        rename demo_customer_new to demo_customer;
+                        EOF
+                        """.stripIndent()
+                    }   
+                }
+                stage('Prepare 10pctdata datacatalog entry') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh """
+                        /dxtoolkit/dx_ctl_js_bookmarks -action create -bookmark_time latest -bookmark_name "10pctdata"  -container_name pipedb -template_name Myapp_template
+                        /dxtoolkit/dx_ctl_js_bookmarks -bookmark_name "10pctdata" -action share
+                        """
+                    }
+                }
+                stage('Prepare 1pctdata') {
+                    agent {
+                        label "oracle_target"
+                    }
+                    steps {
+                        sh """
+                        /home/oracle/sqlcl/bin/sql demo2/demo2@localhost/pipedb << EOF
+                        create table demo_customer_new as select * from demo_customer sample(10);
+                        drop table demo_customer;
+                        rename demo_customer_new to demo_customer;
+                        EOF
+                        """.stripIndent()
+                    }   
+                }
+                stage('Prepare 1pctdata datacatalog entry') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh """
+                        /dxtoolkit/dx_ctl_js_bookmarks -action create -bookmark_time latest -bookmark_name "1pctdata"  -container_name pipedb -template_name Myapp_template
+                        /dxtoolkit/dx_ctl_js_bookmarks -bookmark_name "1pctdata" -action share
+                        """
+                    }
+                }
+                stage('Prepare syntetic') {
+                    agent {
+                        label "oracle_target"
+                    }
+                    steps {
+                        sh """
+                        /home/oracle/sqlcl/bin/sql demo2/demo2@localhost/pipedb << EOF
+                        truncate table demo_customer;
+                        insert into demo_customer values (1, 'test sync 1', 'A', 'N');
+                        insert into demo_customer values (2, 'test sync 2', 'A', 'N');
+                        insert into demo_customer values (3, 'test sync 3', 'A', 'N');
+                        commit;
+                        EOF
+                        """.stripIndent()
+                    }   
+                }
+                stage('Prepare syntetic datacatalog entry') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh """
+                        /dxtoolkit/dx_ctl_js_bookmarks -action create -bookmark_time latest -bookmark_name "syntetic"  -container_name pipedb -template_name Myapp_template
+                        /dxtoolkit/dx_ctl_js_bookmarks -bookmark_name "syntetic" -action share
+                        """
+                    }
+                }
+
+            }
+        }
+
+    }
+}

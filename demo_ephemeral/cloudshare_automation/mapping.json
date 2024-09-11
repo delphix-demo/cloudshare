@@ -1,0 +1,135 @@
+{
+	"Features": [{
+			"FeatureName": "Developer/DBA tasks",
+			"FeatureDetails": {
+				"RequiredVM": ["Developer VM"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Core Datasources"
+			}
+		},
+		{
+			"FeatureName": "Postgres Filesystem Virtualization",
+			"FeatureDetails": {
+				"RequiredVM": ["Delphix Continuous Data Engine 1", "Postgres Source", "Postgres Target"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Core Datasources"
+			}
+		},
+		{
+			"FeatureName": "Postgres Filesystem Masking",
+			"FeatureDetails": {
+				"RequiredVM": ["Delphix Continuous Data Engine 1", "Postgres Source", "Postgres Target","Delphix Continuous Compliance Engine 1"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Core Datasources"
+			}
+		},
+		{
+			"FeatureName": "Oracle Virtualization",
+			"FeatureDetails": {
+				"RequiredVM": ["Delphix Continuous Data Engine 1", "Oracle Mysql Source", "Oracle Mysql Target"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Core Datasources"
+			}
+		},
+		{
+			"FeatureName": "Oracle Masking",
+			"FeatureDetails": {
+				"RequiredVM": ["Delphix Continuous Data Engine 1", "Oracle Mysql Source", "Oracle Mysql Target","Delphix Continuous Compliance Engine 1"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Core Datasources"
+			}
+		},
+		{
+			"FeatureName": "SQLserver Virtualization",
+			"FeatureDetails": {
+				"RequiredVM": ["Delphix Continuous Data Engine 1", "SQL Server Source", "SQL Server Target"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Core Datasources"
+			}
+		},
+		{
+			"FeatureName": "SQLserver Masking",
+			"FeatureDetails": {
+				"RequiredVM": ["Delphix Continuous Data Engine 1", "SQL Server Source", "SQL Server Target",",Delphix Continuous Compliance Engine 1"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Core Datasources"
+			}
+		},
+		{
+			"FeatureName": "MySQL Virtualization",
+			"FeatureDetails": {
+				"RequiredVM": ["Delphix Continuous Data Engine 1", "Oracle Mysql Source", "Oracle Mysql Target"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Core Datasources"
+			}
+		},
+		{
+			"FeatureName": "MongoDB Virtualization",
+			"FeatureDetails": {
+				"RequiredVM": ["Delphix Continuous Data Engine 2", "Mongodb Source", "MongoDB Target"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Mongo Sybase DB2"
+			}
+		},
+		{
+			"FeatureName": "Sybase Virtualization",
+			"FeatureDetails": {
+				"RequiredVM": ["Delphix Continuous Data Engine 2", "Sybase Source", "Sybase Target"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Mongo Sybase DB2"
+			}
+		},
+		{
+			"FeatureName": "Couchbase Virtualization",
+			"FeatureDetails": {
+				"RequiredVM": ["Delphix Continuous Data Engine 3", "Couchbase Source", "Couchbase Staging", "Couchbase Target DEV", "Couchbase Target QA", "Couchbase MaskGC"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Couchbase"
+			}
+		},
+		{
+			"FeatureName": "DCT",
+			"FeatureDetails": {
+				"RequiredVM": ["DCT 6.0 VM","Delphix Continuous Data Engine 1","Delphix Continuous Compliance Engine 1"],
+				"ProjectName": "Delphix Core Managed Demos",
+				"Blueprint": "Standard Demo - Core Datasources"
+			}
+		}
+	],
+	"Dependencies": [{
+			"VMName": "Delphix Continuous Data Engine 1",
+			"FeatureDependency": ["Postgres Filesystem Virtualization","Postgres Filesystem Masking","Oracle Virtualization","Oracle Masking","SQLserver Virtualization","SQLserver Masking","MySQL Virtualization"],
+			"VMDependantVMs": ["Postgres Source", "Postgres Target","Delphix Continuous Compliance Engine 1","Oracle Mysql Source", "Oracle Mysql Target","SQL Server Source", "SQL Server Target"]
+		},
+		{
+			"VMName": "Delphix Continuous Data Engine 2",
+			"FeatureDependency": ["Sybase Virtualization", "MongoDB Virtualization"],
+			"VMDependantVMs": ["Sybase Source", "Sybase Target", "Mongodb Source", "MongoDB Target"]
+		},
+		{
+			"VMName": "Delphix Continuous Data Engine 3",
+			"FeatureDependency": "Couchbase Virtualization",
+			"VMDependantVMs": ["Couchbase Source", "Couchbase Staging", "Couchbase Target DEV", "Couchbase Target QA", "Couchbase MaskGC"]
+		},
+		{
+			"VMName": "Delphix Continuous Compliance Engine 1",
+			"FeatureDependency": ["Postgres Filesystem Masking","Oracle Masking","SQLserver Masking"],
+			"VMDependantVMs": ["Postgres Source", "Postgres Target","Delphix Continuous Data Engine 1","Oracle Mysql Source", "Oracle Mysql Target","SQL Server Source", "SQL Server Target"]
+		},
+		{
+			"VMName": ["Postgres Source", "Postgres Target"],
+			"FeatureDependency": ["Postgres Filesystem Masking","Postgres Filesystem Masking"],
+			"VMDependantVMs": ["Delphix Continuous Data Engine 1","Delphix Continuous Compliance Engine 1"]
+		},
+		{
+			"VMName": ["Oracle Mysql Source", "Oracle Mysql Target"],
+			"FeatureDependency": ["Oracle Virtualization","Oracle Masking","MySQL Virtualization"],
+			"VMDependantVMs": ["Delphix Continuous Data Engine 1","Delphix Continuous Compliance Engine 1"]
+		},
+		{
+			"VMName": ["SQLserver Source", "SQLserver Target"],
+			"FeatureDependency": ["SQLserver Virtualization","SQLserver Masking"],
+			"VMDependantVMs": ["Delphix Continuous Data Engine 1","Delphix Continuous Compliance Engine 1"]
+		}
+	]
+}

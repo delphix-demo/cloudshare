@@ -1,0 +1,44 @@
+//
+// Pipeline to start Couchbase Resources
+//
+// Demo:  Couchbase Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('enable Couchbase environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde3 -name 'Couchbase_MaskGC' -action enable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde3 -name 'Couchbase_Staging' -action enable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde3 -name 'Couchbase_Target_DEV' -action enable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde3 -name 'Couchbase_Target_QA' -action enable"
+         }
+      }
+      stage('start Couchbase DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde3 -action enable -name 'Couchbase_master'"
+            sh "exit 0"
+         }
+      }
+      stage('start Couchbase VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Start_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde3 -action enable -name 'Couchbase_MASK'"
+                    },
+                Start_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde3 -container_name 'Couchbase QA' -action enable"
+                    },
+                Start_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde3 -container_name 'Couchbase DEV' -action enable"
+                }
+            )
+         }
+      }
+   }
+}

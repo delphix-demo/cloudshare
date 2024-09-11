@@ -1,0 +1,52 @@
+//
+// Delphix Reports - DCT Version
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+// 
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Virtualization storage summary report') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit get_virtualization_storage_summary_report"
+            sh """
+               /home/delphix/dct-toolkit search_virtualization_storage_summary_report filter_expression="engine_name eq 'CDE1'"
+            """
+         }
+      }
+       stage('Dsource usage report') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit get_dsource_usage_report"
+         }
+      }
+       stage('Dsource consumption report') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit get_dsource_consumption_report"
+         }
+      }
+      stage('VDB Inventory') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit get_vdbs -c id,database_type,is_replica,is_locked,size,storage_size,masked"
+         }
+      }
+      stage('Audit Summary Report') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit get_audit_logs_summary_report"
+         }
+      }
+      stage('Engine performance analytics report') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit get_engine_performance_analytics_report"
+         }
+      }
+   }
+}

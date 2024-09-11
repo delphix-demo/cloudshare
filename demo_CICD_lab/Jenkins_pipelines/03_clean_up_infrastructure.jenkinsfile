@@ -1,0 +1,140 @@
+pipeline {   
+
+    agent none
+
+    environment {
+        DLPX_ENGINE = "10.160.0.10"
+        DLPX_TARGET = "10.160.0.20"
+        DLPX_USER = "admin"
+        DLPX_PASSWORD = "delphix"
+        DXTOOLKIT_CONF = "/config/dxtools.conf"
+    }
+
+
+    stages { 
+
+      stage('Configure Engine') {
+          agent {
+              docker {
+                      image 'pioro/dxtoolkit:latest'
+                      args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                      reuseNode true
+              }
+          }
+          steps {
+              sh '/dxtoolkit/dx_config -convert todxconf -text myengine,$DLPX_ENGINE,80,$DLPX_USER,$DLPX_PASSWORD,true,http -configfile $DXTOOLKIT_CONF'
+              sh '/dxtoolkit/dx_get_appliance -configfile $DXTOOLKIT_CONF'
+          }
+      }
+
+      stage('Destroy Self Service Containers') {
+        parallel {
+            stage('container 1') {
+                agent {
+                    docker {
+                            image 'pioro/dxtoolkit:latest'
+                            args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                            reuseNode true
+                    }
+                }
+                steps{
+                    sh '/dxtoolkit/dx_ctl_js_container -d myengine -configfile $DXTOOLKIT_CONF -action delete -container_name container1 -dropvdb yes'
+                }
+            }
+            stage('container 2') {
+                agent {
+                    docker {
+                            image 'pioro/dxtoolkit:latest'
+                            args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                            reuseNode true
+                    }
+                }
+                steps{
+                    sh '/dxtoolkit/dx_ctl_js_container -d myengine -configfile $DXTOOLKIT_CONF -action delete -container_name container2 -dropvdb yes'
+                }
+            }
+            stage('container 3') {
+                agent {
+                    docker {
+                            image 'pioro/dxtoolkit:latest'
+                            args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                            reuseNode true
+                    }
+                }
+                steps{
+                    sh '/dxtoolkit/dx_ctl_js_container -d myengine -configfile $DXTOOLKIT_CONF -action delete -container_name container3 -dropvdb yes'
+                }
+            }
+        }
+
+      }
+   
+      stage('Destroy Self Service Template') {
+        agent {
+          docker {
+                  image 'pioro/dxtoolkit:latest'
+                  args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                  reuseNode true
+          }
+        }
+        steps{
+          sh '/dxtoolkit/dx_ctl_js_template -d myengine -configfile $DXTOOLKIT_CONF -action delete -template_name Myapp_template'
+        }
+      }
+
+      stage('Destroy mtgcopy') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps{
+                sh '/dxtoolkit/dx_remove_db -d myengine -configfile $DXTOOLKIT_CONF -name mtgcopy -skip'
+            }
+      }
+
+      stage('Destroy gcopy') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps{
+                sh '/dxtoolkit/dx_remove_db -d myengine -configfile $DXTOOLKIT_CONF -name gcopy -skip'
+            }
+      }
+
+
+      stage('Destroy DSource') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps{
+                sh '/dxtoolkit/dx_remove_db -d myengine -configfile $DXTOOLKIT_CONF -name ora11g -skip'
+            }
+      }
+
+      stage('Destroy Environment') {
+          agent {
+              docker {
+                      image 'pioro/dxtoolkit:latest'
+                      args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                      reuseNode true
+              }
+          }
+          steps{
+              sh '/dxtoolkit/dx_remove_env -d myengine -configfile $DXTOOLKIT_CONF -name singlenode -skip'
+          }
+      }
+
+    }
+}
+

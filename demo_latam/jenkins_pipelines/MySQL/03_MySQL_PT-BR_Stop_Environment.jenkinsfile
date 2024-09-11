@@ -1,0 +1,48 @@
+//
+// Pipeline to Create Mysql Environment for PT_BR Demos
+//
+// Demo:  PT-BR Localized Demo
+//
+// 2022 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('stop Mysql DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Mysql_master'"
+            sh "exit 0"
+         }
+      }
+      stage('stop Mysql VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Stop_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Mysql_MASK'"
+                    },
+                Stop_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Mysql QA' -action disable"
+                    },
+                Stop_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Mysql DEV' -action disable"
+                }
+            )
+         }
+      }
+      stage('Disable MySQL environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Oracle_Target' -action disable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Oracle_Source' -action disable"
+         }
+      }
+      stage('stop containers') {
+          agent { label 'devops' }
+          steps {
+              sh "docker kill \$(docker ps -q)"
+          }
+      }
+   }
+}

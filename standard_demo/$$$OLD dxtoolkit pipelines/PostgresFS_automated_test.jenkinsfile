@@ -1,0 +1,52 @@
+//
+// Pipeline for Automated Test with error for Postgres/Filesystem application datasource
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Delete demo bookamrks') {
+         agent { label 'devops' }
+         steps {
+            catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_bookmarks -d democde1 -bookmark_name 'Pre-test' -template_name 'PostgresFS Demo' -container_name 'PostgresFS QA' -action remove"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_bookmarks -d democde1 -bookmark_name 'QA Error # 12345' -template_name 'PostgresFS Demo' -container_name 'PostgresFS QA' -action remove"
+            sh "exit 0"
+            }
+         }    
+      }
+
+      stage('Bookmark QA pre-test') {
+         agent { label 'devops' }
+         steps {
+            sh "psql -p 7432 -h 10.160.1.60 -d delphixdb -U postgres -f /home/delphix/testdemo_read_db.sql"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_bookmarks -d democde1 -bookmark_name 'Pre-test' -template_name 'PostgresFS Demo' -container_name 'PostgresFS QA' -bookmark_time latest -action create"
+         }
+      }
+       stage('Run Test that corrupts data') {
+         agent { label 'devops' }
+         steps {
+            sh "psql -p 7432 -h 10.160.1.60 -d delphixdb -U postgres -f /home/delphix/testdemo_runtest.sql"
+            sh "psql -p 7432 -h 10.160.1.60 -d delphixdb -U postgres -f /home/delphix/testdemo_read_db.sql"
+         }
+      }
+      stage('Get Shared Bookmark for Developer') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_bookmarks -d democde1 -bookmark_name 'QA Error # 12345' -template_name 'PostgresFS Demo' -container_name 'PostgresFS QA' -bookmark_time latest -action create"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_bookmarks -d democde1 -bookmark_name 'QA Error # 12345' -template_name 'PostgresFS Demo' -container_name 'PostgresFS QA' -action share"
+         }
+      }
+      stage('Rewind QA to Pre-test bookmark') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'PostgresFS QA' -action restore -timestamp 'Pre-test'"
+            sh "psql -p 7432 -h 10.160.1.60 -d delphixdb -U postgres -f /home/delphix/testdemo_read_db.sql"
+         }
+      }
+   }
+}

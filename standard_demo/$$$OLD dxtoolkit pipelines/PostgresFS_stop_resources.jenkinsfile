@@ -1,0 +1,69 @@
+//
+// Pipeline to stop Postgres/Filesystem Resources
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('stop source Drupal docker containers') {
+         agent { label 'Postgres Source' }
+         steps {
+            sh "/home/delphix/stop_web_source.sh"
+            sh "/home/delphix/stop_web_cust_source.sh"
+            sh "exit 0"
+         }
+      }
+      stage('stop Postgres and Filesystem DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Postgres_master'"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'AppFS_master'"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Postgres_cust_master'"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'AppFS_cust_master'"
+            sh "exit 0"
+         }
+      }
+      stage('stop Postgres and Filesystem MASK, DEV and QA') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Stop_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Postgres_MASK'"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'AppFS_MASK'"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Postgres_cust_MASK'"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'AppFS_cust_MASK'"
+                      sh "exit 0"
+                    },
+                Stop_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'PostgresFS QA' -action disable"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'PostgresFS custom QA' -action disable"
+                      sh "exit 0"
+                    },
+                Stop_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'PostgresFS DEV' -action disable"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'PostgresFS custom DEV' -action disable"
+                      sh "exit 0"
+                }
+            )
+         }
+      }
+      stage('stop Postgres DEV for Liquibase demo') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Postgres_DEV_lbase'"
+            sh "exit 0"
+         }
+      }
+      stage('Disable Postgres and Filesystem environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Postgres_Target' -action disable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Postgres_Source' -action disable"
+            sh "exit 0"
+         }
+      }
+   }
+}

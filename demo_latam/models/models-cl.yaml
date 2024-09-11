@@ -1,0 +1,152 @@
+Empresa:
+  table_name: 'empresa'
+  plural: False
+  columns:
+    id:
+      data_type: 'Integer'
+      sequence: 'empresa_seq'
+      primary_key: True
+    nombreempresa:
+      data_type: 'String'
+      data_size: 80
+      nullable: False
+      unique: False
+      doc: 'company-es_CL'
+      identity: True
+    email:
+      data_type: 'String'
+      data_size: 200
+      nullable: False
+      unique: False
+      doc: 'company_email-es_CL'
+    telefono:
+      data_type: 'String'
+      data_size: 20
+      nullable: False
+      unique: True
+      doc: 'phone_number-es_CL'
+    direccion:
+      data_type: 'String'
+      data_size: 200
+      nullable: True
+      unique: False
+      doc: 'address-es_CL'
+    distrito:
+      data_type: 'String'
+      data_size: 50
+      nullable: True
+      unique: False
+      doc: 'commune-es_CL'
+    codigo_postal:
+      data_type: 'String'
+      data_size: 10
+      nullable: True
+      unique: False
+      doc: 'commune_code-es_CL'
+    ciudad:
+      data_type: 'String'
+      data_size: 50
+      nullable: True
+      unique: False
+      doc: 'city-es_CL'
+    region:
+      data_type: 'String'
+      data_size: 40
+      nullable: True
+      unique: False
+      doc: 'administrative_unit-es_CL'
+    company_rut:
+      data_type: 'String'
+      data_size: 20
+      nullable: False
+      unique: True
+      doc: 'company_rut-es_CL'
+  relationships:
+    empleados:
+      related_class: 'Empleado'
+      back_populates: 'empresa'
+      lazy: 'dynamic'
+      type: child
+
+Empleado:
+  table_name: 'empleado'
+  plural: 'Empleados'
+  columns:
+    id:
+      data_type: 'Integer'
+      sequence: 'empleado_seq'
+      primary_key: True
+    nombre:
+      data_type: 'String'
+      data_size: 80
+      nullable: False
+      unique: False
+      doc: 'first_name-es_CL'
+      identity: True
+    apellido:
+      data_type: 'String'
+      data_size: 100
+      nullable: False
+      unique: False
+      doc: 'last_name-es_CL'
+    email:
+      data_type: 'String'
+      data_size: 200
+      nullable: False
+      unique: False
+      doc: 'free_email-es_CL'
+    telefono:
+      data_type: 'String'
+      data_size: 20
+      nullable: False
+      unique: True
+      doc: 'phone_number-es_CL'
+    endereco:
+      data_type: 'String'
+      data_size: 200
+      nullable: True
+      unique: False
+      doc: 'address-es_CL'
+    distrito:
+      data_type: 'String'
+      data_size: 50
+      nullable: True
+      unique: False
+      doc: 'distrito-es_CL'
+    codigo_postal:
+      data_type: 'String'
+      data_size: 10
+      nullable: True
+      unique: False
+      doc: 'postcode-es_CL'
+    ciudad:
+      data_type: 'String'
+      data_size: 50
+      nullable: True
+      unique: False
+      doc: 'city-es_CL'
+    region:
+      data_type: 'String'
+      data_size: 40
+      nullable: True
+      unique: False
+      doc: 'administrative_unit-es_CL'
+    person_rut:
+      data_type: 'String'
+      data_size: 20
+      nullable: False
+      unique: True
+      doc: 'person_rut-es_CL'
+    company_rut:
+      data_type: 'String'
+      data_size: 20
+      foreign_key: 'empresa.company_rut'
+      index: True
+      nullable: False
+      unique: False
+      doc: 'company_rut-es_CL'
+  relationships:
+    empresa:
+      related_class: 'Empresa'
+      back_populates: 'empleados'
+      type: parent

@@ -1,0 +1,55 @@
+//
+// Pipeline for Secure Delivery of PopUp Mainframe datasource
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+// 
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Snap ZOS STAGING') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde2 -name 'PopUp_STAGING'"
+         }
+      }
+      stage('Refresh ZOS MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde2 -name 'PopUp_MASK'"
+         }
+      }
+      stage('Run DATA MASKING job') {
+         agent { label 'devops' }
+         steps {
+            sh "exit 0"
+         }
+      }
+      stage('Snap ZOS MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde2 -name 'PopUp_MASK'"
+         }
+      }
+      stage('Replica ZOS MASK to NonProd') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_replication -d democde2 -action replicate -profilename 'ZOS_PROD-NONPROD'"
+         }
+      }
+      stage('Refresh DEV and QA') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde3 -container_name 'PopUp QA' -action refresh"
+                    },
+                Refresh_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde3 -container_name 'PopUp DEV' -action refresh"
+                }
+            )
+         }
+      }    
+   }
+}

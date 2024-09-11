@@ -1,0 +1,42 @@
+//
+// Pipeline to stop Mongodb Resources
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('stop Mongodb DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action disable -name 'Mongodb_master'"
+            sh "exit 0"
+         }
+      }
+      stage('stop Mongodb VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Stop_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action disable -name 'Mongodb_MASK'"
+                    },
+                Stop_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Mongodb QA' -action disable"
+                    },
+                Stop_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Mongodb DEV' -action disable"
+                }
+            )
+         }
+      }
+      stage('Disable Couchbase environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Mongodb_Target' -action disable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Mongodb_Source' -action disable"
+         }
+      }
+   }
+}

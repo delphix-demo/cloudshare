@@ -1,0 +1,76 @@
+//
+// Pipeline to Create Oracle Ephemeral VDB and VM
+//
+// Demo:  Standard Demo
+//
+// 2023 (c) Delphix - Ruben Catarrunas
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+	  stage('Read PROD Data') {
+        agent { label 'Oracle Source' }
+        steps {
+            sh "bash /home/delphix/mask_oracle_read_prod.sh"
+         }
+       }
+      
+      stage('Create VM') {
+         agent { label 'devops' }
+         steps { sh "/home/delphix/cloudshare-automation/remove_vm --env_name 'INPUT_YOUR_ENVIRONMENT_NAME' --vm_name 'Oracle Mysql Target Ephemeral'"
+                 sh "/home/delphix/cloudshare-automation/add_vm --env_name 'INPUT_YOUR_ENVIRONMENT_NAME' --vm_name 'Oracle Mysql Target Ephemeral' --project_name 'Delphix Core Managed Demos' --blueprint_name 'Oracle MySQL Ephemeral VM template'"}
+      }
+      
+      stage('Discover Environment') {
+         agent { label 'devops' }
+         steps { sh "/home/delphix/dxtoolkit2/dx_create_env -d democde1 -envname Oracle_Target_Ephemeral -envtype unix -host 10.160.1.78 -username 'delphix' -authtype password -password delphix -toolkitdir '/toolkit'"}
+      }
+        
+      
+       stage('Create VDBS') {
+         agent { label 'devops' }
+         steps {
+             parallel(
+              Create_EPHEMASK: {sh "/home/delphix/dxtoolkit2/dx_provision_vdb -d democde1 -sourcename Oracle_master -dbname MASKEPHE -targetname MASKEPHE -group 'Ephemeral Demo' -environment Oracle_Target_Ephemeral -type oracle -envinst '/u01/oracle/oracle19c'"},
+              Create_ORAEPHE:  {sh "/home/delphix/dxtoolkit2/dx_provision_vdb -d democde1 -sourcename Oracle_master -dbname ORAEPHE -targetname ORAEPHE  -group 'Ephemeral Demo' -environment Oracle_Target_Ephemeral -type oracle -envinst '/u01/oracle/oracle19c'"}
+            ) 
+         }
+      }
+      
+      stage('Work on VDB ORAEPHE') {
+        agent { label 'Oracle Target New' }
+         steps { sh "bash /home/delphix/remove_lines_oracle_VDB.sh" }
+      }
+	  
+	  stage('Mask on VDB MASKEPHE') {
+         agent { label 'devops' }
+           steps { sh "cd /home/delphix && ./dxmc job start --engine demomask1 --envname Oracle --jobname 'MASKEPHE mask' --tgt_connector 'MASKEPHE'" }
+      }
+	  
+	  stage('Read Masked Data') {
+         agent { label 'Oracle Target New' }
+         steps { sh "bash /home/delphix/mask_oracle_read_ephe.sh" }
+      }
+
+      stage('Destroy VDBS') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+              Destruir_VDB1:{sh "/home/delphix/dxtoolkit2/dx_remove_db -d democde1 -skip -name 'ORAEPHE'"},
+			  Destruir_VDB2:{sh "/home/delphix/dxtoolkit2/dx_remove_db -d democde1 -skip -name 'MASKEPHE'"}
+		    )
+         }
+      }
+      
+      stage('Destroy Environment') {
+         agent { label 'devops' }
+         steps { sh "/home/delphix/dxtoolkit2/dx_remove_env -d democde1 -skip -name 'Oracle_Target_Ephemeral'"}
+      }
+      
+      stage('Destroy VM') {
+         agent { label 'devops' }
+         steps { sh "/home/delphix/cloudshare-automation/remove_vm --env_name 'INPUT_YOUR_ENVIRONMENT_NAME' --vm_name 'Oracle Mysql Target Ephemeral'"}
+      }
+   }
+}

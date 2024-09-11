@@ -1,0 +1,65 @@
+pipeline {
+   agent none
+
+   environment { 
+        DLPX_ENGINE = "10.160.0.10"
+        DLPX_USER = "admin"
+        DLPX_PASSWORD = "delphix"
+        DLPX_TEMPLATE = "Myapp_template"
+        DLPX_EXPIRATION = "2020-12-24T20:15:00.000Z"
+        DXTOOLKIT_CONF = "/config/dxtools.conf"
+   }
+   stages {
+
+      stage('Configure connection') {
+         agent {
+               docker {
+                     image 'pioro/dxtoolkit:latest'
+                     args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                     reuseNode true
+               }
+         }
+         steps {
+               sh '/dxtoolkit/dx_config -convert todxconf -text myengine,$DLPX_ENGINE,80,$DLPX_USER,$DLPX_PASSWORD,true,http -configfile $DXTOOLKIT_CONF'
+               sh '/dxtoolkit/dx_get_appliance -configfile $DXTOOLKIT_CONF'
+         }
+      }
+
+      stage('Run production snapshot') {
+         agent {
+               docker {
+                     image 'pioro/dxtoolkit:latest'
+                     args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                     reuseNode true
+               }
+         }
+         steps {
+            sh "/dxtoolkit/dx_snapshot_db -d myengine -name db19"
+         }
+      }
+      stage('Refresh VDB') {
+         agent {
+               docker {
+                     image 'delphixautomation/selfservice-automation:latest'
+                     args '-u root'
+               }
+         }
+         steps {
+            sh "python3 -u /dlpx/api_op_container.py $DLPX_USER $DLPX_PASSWORD $DLPX_ENGINE $DLPX_TEMPLATE container1 REFRESH"
+         }
+      }
+      stage('Apply changes with Liquibase') {
+         agent {
+               label "oracle_target"
+         }
+         steps {
+           sh """
+           cd /home/oracle/myproject
+           /home/oracle/lb/liquibase --defaultsFile=/home/oracle/myproject/liquibase.properties_demo --changeLogFile=changelogs/changelog_00002_setup_tab1.xml update
+           """
+         }
+      }
+   }
+}
+
+

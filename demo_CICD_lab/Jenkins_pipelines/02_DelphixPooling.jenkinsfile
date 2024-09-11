@@ -1,0 +1,56 @@
+pipeline {
+   agent none
+   environment { 
+        DLPX_ENGINE = "10.160.0.10"
+        DLPX_USER = "admin"
+        DLPX_PASSWORD = "delphix"
+        DLPX_TEMPLATE = "Myapp_template"
+        DLPX_EXPIRATION = "2023-12-24T20:15:00.000Z"
+   }
+
+   options {
+      lock(label: 'container_pool', variable: "DLPX_CONTAINER", quantity:1) 
+   }
+   
+   stages {
+      stage("Set Bookmark names") {
+         agent any
+         steps {
+            wrap([$class: 'BuildUser']) {
+               script {
+                  USER_ID = "${BUILD_USER_ID}"
+                  DLPX_BOOKMARK = "${USER_ID}_${JOB_NAME}_${BUILD_NUMBER}"
+                  DLPX_BRANCH_NEW = "${USER_ID}_Jenkins_BRANCH_${JOB_NAME}_${BUILD_NUMBER}"
+                  DLPX_CONTAINER = "${env.DLPX_CONTAINER}"
+               }
+            }
+            echo "${USER_ID}"
+            echo "${DLPX_BOOKMARK}"
+            echo "${DLPX_CONTAINER}"
+         }
+      }
+
+      stage('Create Bookmark') {
+         agent {
+               docker {
+                     image 'delphixautomation/selfservice-automation:latest'
+                     args '-u root'
+               }
+         }
+         steps {
+            sh "python3 -u /dlpx/api_op_bookmark.py $DLPX_USER $DLPX_PASSWORD $DLPX_ENGINE $DLPX_TEMPLATE $DLPX_CONTAINER  $DLPX_BOOKMARK CURRENT_TIME $DLPX_EXPIRATION CREATE true"
+         }
+      }
+      stage('Create branch') {
+         agent {
+               docker {
+                     image 'delphixautomation/selfservice-automation:latest'
+                     args '-u root'
+               }
+         }
+         steps {
+            sh "python3 -u /dlpx/api_op_branch.py $DLPX_USER $DLPX_PASSWORD $DLPX_ENGINE $DLPX_TEMPLATE $DLPX_CONTAINER $DLPX_BOOKMARK $DLPX_BRANCH_NEW CREATE"
+         }
+      }
+   }
+}

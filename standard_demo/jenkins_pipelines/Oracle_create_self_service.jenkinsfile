@@ -1,0 +1,33 @@
+//
+// Pipeline to Create Oracle Self-Service Resources - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//                    08/07/24 Fixed problem with Oracle SID
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create Oracle_MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='Oracle_master' name='Oracle_MASK' database_name='ORAMASK' unique_name='ORAMASK' oracle_instance_name='ORAMASK' environment_id='Oracle_Target' environment_user_id='delphix' repository_id='/u01/oracle/oracle19c' target_group_id='MaskGC'"
+         }
+      }
+      stage('Create Oracle DEV and QA VDB from MASK') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_DEV: {
+                      sh "/home/delphix/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='Oracle_MASK' name='Oracle_DEV' database_name='ORADEV' unique_name='ORADEV' oracle_instance_name='ORADEV' environment_id='Oracle_Target' environment_user_id='delphix' repository_id='/u01/oracle/oracle19c' target_group_id='DEV'"
+                    },
+                Create_QA: {
+                      sh "/home/delphix/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='Oracle_MASK' name='Oracle_QA' database_name='ORAQA' unique_name='ORAQA' oracle_instance_name='ORAQA' environment_id='Oracle_Target' environment_user_id='delphix' repository_id='/u01/oracle/oracle19c' target_group_id='QA'"
+                    }
+            )
+         }
+      }
+   }
+}

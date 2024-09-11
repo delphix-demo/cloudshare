@@ -1,0 +1,48 @@
+//
+// Pipeline to create an empty demo for Oracle
+//
+// Demo:  PT-BR Empty Demo
+//
+// 2024 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
+//
+// Delete VDBs
+// Delete DSources
+
+pipeline {
+   agent { label 'devops' }
+   environment{
+            DIR='/home/delphix/sample-python-app'
+        }
+   stages {
+      stage('Delete VDBs') {
+            steps {
+                script {
+                    // Deleting VDBs using dxtoolkit2 commands
+                    def vdbsToDelete = ['Oracle_QA', 'Oracle_DEV', 'Oracle_MASK']
+                    vdbsToDelete.each { vdb ->
+                        sh "/home/delphix/dxtoolkit2/dx_remove_db -d democde1 -name ${vdb} -force -skip"
+                    }
+                }
+            }
+        }
+    stage('Delete dSource') {
+            steps {
+                script {
+                    // Deleting dSource using dxtoolkit2 commands
+                    def dSourceToDelete = 'Oracle_master'
+                    sh "/home/delphix/dxtoolkit2/dx_remove_db -d democde1 -name ${dSourceToDelete} -force -skip"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'VDBs and dSource deleted successfully!'
+        }
+        failure {
+            echo 'Failed to delete VDBs or dSource.'
+        }
+    }
+    
+}

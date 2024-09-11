@@ -1,0 +1,58 @@
+//
+// Pipeline for Automated Test with error for Postgres/Filesystem application datasource - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Delete demo bookamrks') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /home/delphix/dct-toolkit delete_bookmark bookmark_id='Pre-test' || true
+            """
+            sh """
+               /home/delphix/dct-toolkit delete_bookmark bookmark_id='QA Error # 12345' || true
+            """
+         }    
+      }
+
+      stage('Bookmark QA pre-test') {
+         agent { label 'devops' }
+         steps {
+            sh "psql -p 7432 -h 10.160.1.60 -d delphixdb -U postgres -f /home/delphix/testdemo_read_db.sql"
+            sh """
+               /home/delphix/dct-toolkit create_bookmark vdb_ids="Postgres_QA,AppFS_QA" name='Pre-test'
+            """
+         }
+      }
+       stage('Run Test that corrupts data') {
+         agent { label 'devops' }
+         steps {
+            sh "psql -p 7432 -h 10.160.1.60 -d delphixdb -U postgres -f /home/delphix/testdemo_runtest.sql"
+            sh "psql -p 7432 -h 10.160.1.60 -d delphixdb -U postgres -f /home/delphix/testdemo_read_db.sql"
+         }
+      }
+      stage('Get Shared Bookmark for Developer') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /home/delphix/dct-toolkit create_bookmark vdb_ids="Postgres_QA,AppFS_QA" name='QA Error # 12345'
+            """
+         }
+      }
+      stage('Rewind QA to Pre-test bookmark') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /home/delphix/dct-toolkit refresh_vdb_group vdb_group_id='CMS_QA' bookmark_id='Pre-test'
+            """
+            sh "psql -p 7432 -h 10.160.1.60 -d delphixdb -U postgres -f /home/delphix/testdemo_read_db.sql"
+         }
+      }
+   }
+}

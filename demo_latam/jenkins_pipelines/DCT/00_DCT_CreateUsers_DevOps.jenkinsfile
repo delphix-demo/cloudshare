@@ -1,0 +1,33 @@
+//
+// Pipeline to Create Users, Access Groups, Tag VDBs
+//
+// Demo:  PT-BR Localized Demo
+//
+// 2024 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Create dev and qa users on DCT') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/DCT_scripts/dc_create_account.sh"
+            sh "exit 0"
+         }
+      }
+       stage('Create DEV and QA access groups') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/DCT_scripts/dc_create_group.sh"
+            sh "exit 0"
+         }
+      }
+      stage('Tag VDBs') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/DCT_scripts/dc_create_group.sh"
+            sh "exit 0"
+         }
+      }
+   }
+}

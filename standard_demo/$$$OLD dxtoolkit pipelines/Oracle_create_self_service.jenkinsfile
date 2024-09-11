@@ -1,0 +1,49 @@
+//
+// Pipeline to Create Oracle Self-Service Resources
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create Oracle_MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_provision_vdb -d democde1 -sourcename Oracle_master -dbname ORAMASK -targetname Oracle_MASK -group 'MaskGC' -creategroup -environment Oracle_Target -type oracle -envinst '/u01/oracle/oracle19c' -envUser delphix"
+         }
+      }
+      stage('Create Oracle_DEV VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_provision_vdb -d democde1 -sourcename Oracle_MASK -dbname ORADEV -targetname Oracle_DEV -group 'DEV' -creategroup -environment Oracle_Target -type oracle -envinst '/u01/oracle/oracle19c' -envUser delphix"
+         }
+      }
+      stage('Create Oracle_QA VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_provision_vdb -d democde1 -sourcename Oracle_MASK -dbname ORAQA -targetname Oracle_QA -group 'QA' -creategroup -environment Oracle_Target -type oracle -envinst '/u01/oracle/oracle19c' -envUser delphix"
+         }
+      }
+      stage('Create Self Service Template Oracle Demo') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_template -d democde1 -source 'MaskGC,Oracle_MASK,Oracle_MASK,1'  -action create -template_name 'Oracle Demo'"
+         }
+      }
+      stage('Create Self Service Container Oracle DEV') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -action create -container_def 'DEV,Oracle_DEV' -container_name 'Oracle DEV' -template_name 'Oracle Demo' -container_owner admin -dontrefresh"
+         }
+      }
+      stage('Create Self Service Container Oracle QA') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -action create -container_def 'QA,Oracle_QA' -container_name 'Oracle QA' -template_name 'Oracle Demo' -container_owner admin -dontrefresh"
+         }
+      }
+   }
+}

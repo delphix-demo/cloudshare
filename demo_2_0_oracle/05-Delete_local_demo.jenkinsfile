@@ -1,0 +1,55 @@
+//
+// Pipeline to destroy local Demo environment - Oracle
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Delete local VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_DEV: {
+                      sh """
+                         /root/dct-toolkit delete_vdb  vdb_id='orcldev' 
+                      """
+                },
+                Delete_QA: {
+                      sh """
+                         /root/dct-toolkit delete_vdb  vdb_id='orclqa' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Delete local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_vdb  vdb_id='orclmask'
+            """
+         }
+      }
+      stage('Delete dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_dsource  dsource_id='orcl_master'
+               sleep 20 
+            """
+         }
+      }
+      stage('Delete source') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_source  source_id='Postgres_master'
+            """
+         }
+      }
+   }
+}

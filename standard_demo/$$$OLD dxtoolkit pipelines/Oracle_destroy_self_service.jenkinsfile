@@ -1,0 +1,37 @@
+//
+// Pipeline to Destroy Oracle Self-Service Resources
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Destroy container Oracle DEV') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -action delete -container_name 'Oracle DEV' -dropvdb yes"
+         }
+      }
+      stage('Destroy container Oracle QA') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -action delete -container_name 'Oracle QA' -dropvdb yes"
+         }
+      }
+      stage('Destroy Self Service Template Oracle Demo') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_js_template -d democde1 -action delete -template_name 'Oracle Demo'"
+         }
+      }
+      stage('Destroy ORAMASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_remove_db -d democde1 -skip -name 'Oracle_MASK'"
+         }
+      }
+   }
+}

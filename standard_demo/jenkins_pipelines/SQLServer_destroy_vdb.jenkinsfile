@@ -1,0 +1,19 @@
+//
+// Pipeline to destroy Sqlserver VDB - DCT version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('destroy Sqlserver TEST VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Suitecrm_TEST'"
+            sh "exit 0"
+         }
+      }
+   }
+}

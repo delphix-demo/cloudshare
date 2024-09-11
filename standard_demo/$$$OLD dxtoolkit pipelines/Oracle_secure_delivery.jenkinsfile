@@ -1,0 +1,62 @@
+//
+// Pipeline for Secure Delivery of Oracle datasource
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+pipeline {
+   agent { label 'Oracle Source' }
+   stages {
+       stage('Get Data from Production') {
+        agent { label 'Oracle Source' }
+        steps {
+            sh "bash /home/delphix/mask_oracle_read_prod.sh"
+         }
+       }
+       stage('Snap Production') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'Oracle_master'"
+         }
+     }
+      stage('Refresh MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'Oracle_MASK'"
+         }
+      }
+      stage('Run MASK job') {
+         agent { label 'devops' }
+         steps {
+            sh "cd /home/delphix && ./dxmc job start --engine demomask1 --envname Oracle --jobname 'Mask anagrafe' --tgt_connector 'Oracle'"
+         }
+      }
+      stage('Snap MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'Oracle_MASK'"
+         }
+      }
+      stage('Refresh DEV and QA from MASK') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle QA' -action refresh"
+                    },
+                Refresh_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle DEV' -action refresh"
+                }
+            )
+         }
+      }
+     stage('Read data from DEV and QA') {
+         agent { label 'Oracle Target' }
+         steps {
+            sh "bash /home/delphix/mask_oracle_read_dev_qa.sh"
+         }
+      }
+   }
+}

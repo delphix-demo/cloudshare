@@ -1,0 +1,42 @@
+//
+// Pipeline to stop Oracle Resources - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('stop Oracle DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit disable_dsource dsource_id='Oracle_master'"
+            sh "exit 0"
+         }
+      }
+      stage('stop Oracle VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Stop_MASK: {
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Oracle_MASK'"
+                    },
+                Stop_QA: {
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Oracle_QA'"
+                    },
+                Stop_DEV: {
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Oracle_DEV'"
+                }
+            )
+         }
+      }
+      stage('Disable Oracle environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit disable_environment environment_id='Oracle_Target'"
+            sh "/home/delphix/dct-toolkit disable_environment environment_id='Oracle_Source'"
+         }
+      }
+   }
+}

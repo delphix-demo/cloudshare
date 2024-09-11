@@ -1,0 +1,32 @@
+//
+// Pipeline to Destroy Oracle Self-Service Resources - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Destroy Oracle DEV and QA VDB') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_DEV: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Oracle_DEV'"
+                },
+                Delete_QA: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Oracle_QA'"
+                }
+            )
+         }
+      }
+      stage('Destroy Oracle MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Oracle_MASK'"
+         }
+      }
+   }
+}

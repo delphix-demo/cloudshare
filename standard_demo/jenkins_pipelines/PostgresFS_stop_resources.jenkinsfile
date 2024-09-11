@@ -1,0 +1,73 @@
+//
+// Pipeline to stop Postgres/Filesystem Resources - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('stop source Drupal docker containers') {
+         agent { label 'Postgres Source' }
+         steps {
+            sh "/home/delphix/stop_web_source.sh"
+            sh "/home/delphix/stop_web_cust_source.sh"
+            sh "exit 0"
+         }
+      }
+      stage('stop Postgres and Filesystem DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit disable_dsource dsource_id='Postgres_master'"
+            sh "/home/delphix/dct-toolkit disable_dsource dsource_id='AppFS_master'"
+            sh "/home/delphix/dct-toolkit disable_dsource dsource_id='Postgres_cust_master'"
+            sh "/home/delphix/dct-toolkit disable_dsource dsource_id='AppFS_cust_master'"
+            sh "exit 0"
+         }
+      }
+      stage('stop Postgres and Filesystem MASK, DEV and QA') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Stop_MASK: {
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Postgres_MASK'"
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='AppFS_MASK'"
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Postgres_cust_MASK'"
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='AppFS_cust_MASK'"
+                      sh "exit 0"
+                    },
+                Stop_QA: {
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Postgres_QA'"
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='AppFS_QA'"
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Postgres_cust_QA'"
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='AppFS_cust_QA'"
+                      sh "exit 0"
+                    },
+                Stop_DEV: {
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Postgres_DEV'"
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='AppFS_DEV'"
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Postgres_cust_DEV'"
+                      sh "/home/delphix/dct-toolkit disable_vdb vdb_id='AppFS_cust_DEV'"
+                      sh "exit 0"
+                }
+            )
+         }
+      }
+      stage('stop Postgres DEV for Liquibase demo') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit disable_vdb vdb_id='Postgres_DEV_lbase'"
+            sh "exit 0"
+         }
+      }
+      stage('Disable Postgres and Filesystem environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit disable_environment environment_id='Postgres_Target'"
+            sh "/home/delphix/dct-toolkit disable_environment environment_id='Postgres_Source'"
+            sh "exit 0"
+         }
+      }
+   }
+}

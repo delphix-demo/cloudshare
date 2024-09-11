@@ -1,0 +1,19 @@
+//
+// Pipeline to create Sqlserver VDB - DCT version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('create Sqlserver TEST VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit provision_vdb_by_snapshot mssql source_data_id='Suitecrm_master' name='Suitecrm_TEST' database_name='Suitecrm_TEST' environment_id='Sqlserver_Target' environment_user_id='delphix_os' repository_id='MSSQLSERVER' target_group_id='QA'"
+            sh "exit 0"
+         }
+      }
+   }
+}

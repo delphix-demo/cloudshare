@@ -1,0 +1,82 @@
+//
+// Pipeline to Create Oracle Environment for PT_BR Demos
+//
+// Demo:  PT-BR Localized Demo
+//
+// 2022 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
+//
+
+pipeline {
+   agent { label 'devops' }
+   environment{
+    DIR='/home/delphix/sample-python-app'
+}
+   stages {
+      stage('enable Oracle environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Oracle_Target' -action enable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Oracle_Source' -action enable"
+         }
+      }
+      stage('start Oracle DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_master'"
+            sh "exit 0"
+         }
+      }
+      stage('start Oracle VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Start_MASK_VDB: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_MASK'"
+                    },
+                Start_QA_VDB: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle QA' -action enable"
+                    },
+                Start_DEV_VDB: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle DEV' -action enable"
+                }
+            )
+         }
+      }
+      stage('configure PTBR app on Source DB') {
+         agent { label 'devops' }
+         steps {
+             sh "docker run --rm --env-file ${DIR}/.env.orasrc -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-oracle:latest migrations_seed.py"
+             sh "docker run --rm --env-file ${DIR}/.env.orasrc -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-oracle:latest migrations_custom.py"
+         }
+      }
+      stage('Snap Production') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'Oracle_master'"
+         }
+      }
+      stage('Refresh MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'Oracle_MASK'"
+         }
+      }
+      stage('start PT_BR App') {
+         agent { label 'devops' }
+         steps {
+             parallel(
+                Start_Prod_APP: {
+                      sh "docker run -d --env-file ${DIR}/.env.orasrc -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-oracle:latest"
+                    },
+                Start_QA_APP: {
+                      sh "docker run -d --env-file ${DIR}/.env.oraqa -p 8082:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-oracle:latest"
+                    },
+                Start_DEV_APP: {
+                      sh "docker run -d --env-file ${DIR}/.env.oradev -p 8083:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-oracle:latest"
+                }
+            )
+            }
+         }
+   }
+}
+

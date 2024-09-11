@@ -1,0 +1,42 @@
+//
+// Pipeline to start Mongodb Resources
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('enable Mongodb environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Mongodb_Target' -action enable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Mongodb_Source' -action enable"
+         }
+      }
+      stage('start Mongodb DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action enable -name 'Mongodb_master'"
+            sh "exit 0"
+         }
+      }
+      stage('start Mongodb VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Start_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action enable -name 'Mongodb_MASK'"
+                    },
+                Start_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Mongodb QA' -action enable"
+                    },
+                Start_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Mongodb DEV' -action enable"
+                }
+            )
+         }
+      }
+   }
+}

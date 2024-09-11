@@ -1,0 +1,6 @@
+{
+    "domainName": "BR_TEST_DOMAIN_1",
+    "expressionName": "BR Test Expression 1",
+    "regularExpression": "^special|regex?for*my.addresses",
+    "dataLevelProfiling": true
+}

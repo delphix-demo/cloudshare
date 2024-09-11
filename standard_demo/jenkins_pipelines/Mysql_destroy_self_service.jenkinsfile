@@ -1,0 +1,32 @@
+//
+// Pipeline to Destroy Mysql Self-Service Resources - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Destroy Mysql DEV and QA VDB') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_DEV: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Mysql_DEV'"
+                },
+                Delete_QA: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Mysql_QA'"
+                }
+            )
+         }
+      }
+      stage('Destroy Mysql MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Mysql_MASK'"
+         }
+      }
+   }
+}

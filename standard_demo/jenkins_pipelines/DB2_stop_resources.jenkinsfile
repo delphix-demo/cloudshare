@@ -1,0 +1,42 @@
+//
+// Pipeline to stop DB2 Resources
+//
+// Demo:  Standard Demo
+//
+// 2023 (c) Delphix 
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('stop DB2 dSource') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action disable -name 'db2_master'"
+            sh "exit 0"
+         }
+      }
+      stage('stop DB2 VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Stop_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action disable -name 'DB2_MASK'"
+                    },
+                Stop_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action disable -name 'DB2_QA'"
+                    },
+                Stop_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action disable -name 'DB2_DEV'"
+                }
+            )
+         }
+      }
+      stage('disable DB2 environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde6 -name 'DB2_Source' -action disable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde6 -name 'DB2_Target' -action disable"
+         }
+      }
+   }
+}

@@ -1,0 +1,100 @@
+//
+// Pipeline to start Sqlserver FlaskApp Resources - With Custom SQL
+//
+// Demo:  PT-BR Localized Demo
+//
+// 2024 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   environment{
+            DIR='/home/delphix/sample-python-app'
+            SQL_SERVER_HOST = '10.160.1.22'
+            SQL_SERVER_PORT = '1433'  // Default SQL Server port
+            SQL_SERVER_USER = 'sa'
+            SQL_SERVER_PASSWORD = 'Delphix_123!'
+            SQL_SERVER_DATABASE = 'flaskapp'
+            SQL_SCRIPT_NAME = '/home/delphix/sample-python-app/add_salario.sql'
+        }
+   stages {
+      stage('enable Sqlserver environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Sqlserver_Target' -action enable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Sqlserver_Source' -action enable"
+            sh "exit 0"
+         }
+      }
+       stage('start Sqlserver DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'flaskapp'"
+            sh "exit 0"
+         }
+      }
+      stage('start Sqlserver VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Start_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'flaskapp_mask'"
+                      sh "exit 0"
+                    },
+                Start_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'flaskapp_dev'"
+                      sh "exit 0"
+                    },
+                Start_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'flaskapp_qa'"
+                      sh "exit 0"
+                    }
+            )
+         }
+      }
+      stage('configure PTBR app on Source DB') {
+        agent { label 'devops' }
+        steps {
+            sh "docker run --rm --env-file ${DIR}/.env.sqlserver.prod -p 8081:5000/tcp -v ${DIR}/models-br-original.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest migrations_seed.py"
+            sh "docker run --rm --env-file ${DIR}/.env.sqlserver.prod -p 8081:5000/tcp -v ${DIR}/models-br-original.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest migrations_custom.py"
+        }
+     }
+     stage('Run SQL Script on SQL Server') {
+            steps {
+                script {
+                    // Run the SQL script on the SQL Server from Jenkins machine using sqlcmd
+                    sh """
+                    /opt/mssql-tools/bin/sqlcmd -S ${SQL_SERVER_HOST},${SQL_SERVER_PORT} -U ${SQL_SERVER_USER} -P ${SQL_SERVER_PASSWORD} -d ${SQL_SERVER_DATABASE} -i ${SQL_SCRIPT_NAME}
+                    """
+                }
+            }
+        }
+     stage('Snap Production') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'flaskapp'"
+         }
+      }
+      stage('Refresh MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'flaskapp_mask'"
+         }
+      }
+     stage('start PT_BR FlaskApp') {
+        agent { label 'devops' }
+        steps {
+            parallel(
+               Start_Prod_APP: {
+                     sh "docker run -d --env-file ${DIR}/.env.sqlserver.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest"
+                   },
+               Start_QA_APP: {
+                     sh "docker run -d --env-file ${DIR}/.env.sqlserver.qa -p 8082:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest"
+                   },
+               Start_DEV_APP: {
+                     sh "docker run -d --env-file ${DIR}/.env.sqlserver.dev -p 8083:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest"
+               }
+           )
+           }
+        }
+   }
+}

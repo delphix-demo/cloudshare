@@ -1,0 +1,114 @@
+//
+// Pipeline to create local Demo environment
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create Postgres Source') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_postgres_source environment_id="Postgres Source" name="Postgres_master" repository_id="Postgres vFiles (15.0)" 
+            """
+         }
+      }
+      stage('Link Dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit link_appdata_database source_id="Postgres_master" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_master","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.29", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5433, "configSettingsStg":[]}' 
+               sleep 30
+            """
+         }
+      }
+      stage('Create local BUGFIX VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_master' name='Postgres_BUGFIX' postgres_port='5445' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='Bugfix' mount_point='/mnt/provision/postgres_BUGFIX' 
+            """
+         }
+      }
+      stage('Create local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_master' name='Postgres_MASK' postgres_port='5444' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision/postgres_MASK' --masked             
+            """
+         }
+      }
+      stage('Run Masking job') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                sleep 30
+               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Masking_patients' 
+            """
+         }
+      }   
+      stage('Snap local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit snapshot_vdb vdb_id='Postgres_MASK'                       
+            """
+         }
+      }   
+      stage('Show masked rows MASK vs BUGFIX') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               psql -p 5445 -h 10.160.1.74 -U postgres -d delphixdb -c "select * from public.patient limit 5; select * from public.patient_visit limit 5; " 
+               psql -p 5444 -h 10.160.1.74 -U postgres -d delphixdb -c "select * from public.patient limit 5; select * from public.patient_visit limit 5; "              
+            """
+         }
+      } 
+      stage('Create local QA VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_MASK' name='Postgres_QA' postgres_port='7432' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision/postgres_QA'             """
+         }
+      }  
+      stage('Create local DEV VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_MASK' name='Postgres_DEV' postgres_port='6432' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision/postgres_DEV'  
+            """
+         }
+      }
+      stage('Generate synthetic data for DEV') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/fb256a81-9834-4262-8d19-c770f6518953/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_data_DEV.csv 
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/2f8009cf-a3d3-4a42-a942-9c512c145897/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_visit_data_DEV.csv                
+            """
+         }
+      }   
+      stage('Load synthetic data for DEV') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               psql -p 6432 -h 10.160.1.74 -U postgres -d delphixdb -c "truncate table patient,patient_visit restart identity" 
+               psql -p 6432 -h 10.160.1.74 -U postgres -d delphixdb -c "COPY patient(address,first_name,last_name,dob,ssn,marital_status,city,state,mail,zipcode,phone) FROM '/var/lib/pgsql/bm_patient_data_DEV.csv' DELIMITER ',' CSV HEADER;" 
+               psql -p 6432 -h 10.160.1.74 -U postgres -d delphixdb -c "COPY patient_visit(patient_id,visit_date,copay,primary_reason,notes) FROM '/var/lib/pgsql/bm_patient_visit_data_DEV.csv' DELIMITER ',' CSV HEADER;" 
+            """
+         }
+      } 
+      stage('Show QA vs DEV rows') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               psql -p 6432 -h 10.160.1.74 -U postgres -d delphixdb -c "select * from public.patient limit 3; select * from public.patient_visit limit 3; " 
+               psql -p 7432 -h 10.160.1.74 -U postgres -d delphixdb -c "select * from public.patient limit 3; select * from public.patient_visit limit 3; "             """
+         }
+      }   
+   }
+}

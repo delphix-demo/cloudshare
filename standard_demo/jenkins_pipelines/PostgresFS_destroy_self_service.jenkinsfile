@@ -1,0 +1,65 @@
+//
+// Pipeline to Destroy Postgres and AppFS Self-Service Resources - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Destroy VDB Groups') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_MASK'"
+            sh "/home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_DEV'"
+            sh "/home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_QA'"
+         }
+      }
+      stage('Destroy Postgres DEV and QA VDB') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_DEV: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Postgres_DEV'"
+                },
+                Delete_QA: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Postgres_QA'"
+                }
+            )
+         }
+      }
+      stage('Destroy Postgres DEV Demo Liquibase') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Postgres_DEV_lbase'"
+         }
+      }
+      stage('Destroy Postgres MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Postgres_MASK'"
+         }
+      }
+      stage('Destroy AppFS DEV and QA VDB') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_DEV: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='AppFS_DEV'"
+                },
+                Delete_QA: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='AppFS_QA'"
+                }
+            )
+         }
+      }
+      stage('Destroy AppFS MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit delete_vdb vdb_id='AppFS_MASK'"
+         }
+      }
+   }
+}

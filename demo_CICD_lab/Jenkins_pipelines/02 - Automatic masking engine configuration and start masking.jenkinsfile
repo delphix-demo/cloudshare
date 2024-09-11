@@ -1,0 +1,55 @@
+node {
+  def remote = [:]
+  remote.name = 'oracle_target'
+  remote.host = '10.160.0.20'
+  remote.user = 'oracle'
+  remote.password = 'delphix'
+  remote.allowAnyHosts = true
+   stage('Configure Masking Engine') {
+       sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc engine delete --engine myengine" 
+       sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc engine add --engine myengine --ip 10.160.0.10  --username admin --password Admin-12 --default Y"
+        }  
+    stage('Add Masking Environment') {
+              sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc application add --appname \"oracle app2\""
+              sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc environment add --envname \"Production App\" --appname \"oracle app2\""
+     sh 'sleep 5'
+      }
+      stage('Add Connector') {
+        sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc connector add --connectorname Ora19conn --envname \"Production App\" --connectortype oracle --host 10.160.0.20 --port 1521 --schemaname DELPHIXDB --username delphixdb --sid vdb1 --password delphix"
+      sh 'sleep 5'
+      }
+      stage('Call Ruleset') {
+          sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc ruleset add --rulesetname ora_rs --connectorname Ora19conn --envname \"Production App\""
+          sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc ruleset addmeta --rulesetname ora_rs --envname \"Production App\" --metaname PATIENT"
+          sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc ruleset addmeta --rulesetname ora_rs --envname \"Production App\" --metaname EMPLOYEES"
+          sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc ruleset addmeta --rulesetname ora_rs --envname \"Production App\" --metaname MEDICAL_RECORDS"
+          sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc ruleset addmeta --rulesetname ora_rs --envname \"Production App\" --metaname PATIENT_DETAILS"
+        }    
+     stage('Call Profiler Job') {
+       script {
+      try {
+                sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc profilejob add --jobname orcl_profile --envname \"Production App\" --rulesetname ora_rs --profilename Financial --multi_tenant Y"
+      }          
+      catch (exec) {
+                        echo "i'm eating that exception"
+                     }
+        }
+              }
+       stage('Run Profiler Job') {  
+         sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc profilejob start --jobname orcl_profile --envname \"Production App\" --tgt_connector Ora19conn"
+       }
+     stage('Create Masking Job') {
+           try {
+          sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc job add --jobname orcl_msk --rulesetname ora_rs --on_the_fly N --envname \"Production App\""
+          }
+          catch (exec) {
+                          echo "exit 0"
+        }  
+             }
+           stage('Running Masking Job') {
+          sshCommand remote: remote, command: "/home/oracle/dxmc/dxmc job start --jobname orcl_msk  --envname \"Production App\" --tgt_connector Ora19conn"
+        } 
+        stage('Run VDB snapshot') {
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_snapshot_db -d myengine -name vdb1"
+        }
+}

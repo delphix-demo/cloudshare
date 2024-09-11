@@ -1,0 +1,71 @@
+//
+// Pipeline for Secure Delivery of Postgres/Filesystem Custom application datasource
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Snap Production') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Snap_Postgres: {
+                      sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'Postgres_cust_master'"
+                    },
+                Snap_FS: {
+                      sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'AppFS_cust_master'"
+                }
+            )
+         }
+      }
+      stage('Refresh MASK') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_Postgres: {
+                      sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'Postgres_cust_MASK'"
+                    },
+                Refresh_FS: {
+                      sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'AppFS_cust_MASK'"
+                }
+            )
+         }
+      }
+      stage('Run MASK job') {
+         agent { label 'devops' }
+         steps {
+            sh "cd /home/delphix && ./dxmc job start --engine demomask1 --envname 'Custom Drupal App' --jobname 'Drupal 9 Custom App Masking' --tgt_connector 'Custom Drupal App'"
+         }
+      }
+      stage('Snap MASK') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Snap_Postgres: {
+                      sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'Postgres_cust_MASK'"
+                    },
+                Snap_FS: {
+                      sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'AppFS_cust_MASK'"
+                }
+            )
+         }
+      }
+      stage('Refresh DEV and QA') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'PostgresFS custom QA' -action refresh"
+                    },
+                Refresh_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'PostgresFS custom DEV' -action refresh"
+                }
+            )
+         }
+      }
+
+   }
+}

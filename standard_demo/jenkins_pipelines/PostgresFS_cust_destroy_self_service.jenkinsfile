@@ -1,0 +1,59 @@
+//
+// Pipeline to Destroy Postgres and AppFS Custom Self-Service Resources - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Destroy VDB Custom Groups') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_CUST_MASK'"
+            sh "/home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_CUST_DEV'"
+            sh "/home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_CUST_QA'"
+         }
+      }
+      stage('Destroy Postgres DEV and QA Custom VDB') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_DEV: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Postgres_cust_DEV'"
+                },
+                Delete_QA: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Postgres_cust_QA'"
+                }
+            )
+         }
+      }
+      stage('Destroy Postgres MASK Custom VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit delete_vdb vdb_id='Postgres_cust_MASK'"
+         }
+      }
+      stage('Destroy AppFS Custom DEV and QA VDB') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_DEV: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='AppFS_cust_DEV'"
+                },
+                Delete_QA: {
+                      sh "/home/delphix/dct-toolkit delete_vdb vdb_id='AppFS_cust_QA'"
+                }
+            )
+         }
+      }
+      stage('Destroy AppFS Custom MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit delete_vdb vdb_id='AppFS_cust_MASK'"
+         }
+      }
+   }
+}

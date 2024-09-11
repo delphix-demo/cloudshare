@@ -1,0 +1,49 @@
+//
+// Pipeline to start Sqlserver SuiteCRM Resources
+//
+// Demo:  PT-BR Localized Demo
+//
+// 2022 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Snap Production') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'flaskapp'"
+         }
+      }
+      stage('Refresh MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'flaskapp_mask'"
+         }
+      }
+      stage('Run MASK job') {
+         agent { label 'devops' }
+         steps {
+            sh "cd /home/delphix && ./dxmc job start --engine demomask1 --envname SQLServer_Environment --jobname 'Mask_LGPD' --tgt_connector 'Flaskapp_Mask'"
+         }
+      }
+      stage('Snap MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'flaskapp_mask'"
+         }
+      }
+      stage('Refresh DEV and QA') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'flaskapp_qa'"
+                    },
+                Refresh_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'flaskapp_dev'"
+                }
+            )
+         }
+      }
+   }
+}

@@ -1,0 +1,51 @@
+//
+// Pipeline for Secure Delivery of DB2 datasource
+//
+// Demo:  Standard Demo
+//
+// 2023 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+// TODO:   ADD MASKING STEP
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Snap Production') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde6 -name 'db2_master'"
+         }
+      }
+      stage('Refresh MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde6 -name 'DB2_MASK'"
+         }
+      }
+      stage('Run MASK job') {
+         agent { label 'devops' }
+         steps {
+            sh "cd /home/delphix && ./dxmc job start --engine demomask6 --envname 'DB2_MASK' --jobname 'Mask' --tgt_connector 'DB2Connect'"
+         }
+      }
+      stage('Snap MASK') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde6 -name 'DB2_MASK'"
+         }
+      }
+      stage('Refresh DEV and QA') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde6 -container_name 'DB2 QA' -action refresh"
+                    },
+                Refresh_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde6 -container_name 'DB2 DEV' -action refresh"
+                }
+            )
+         }
+      }
+   }
+}

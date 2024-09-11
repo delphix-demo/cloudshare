@@ -1,0 +1,26 @@
+//
+// Pipeline to Create Postgres VDB
+//
+// Demo:  Standard Demo
+//
+// 2023 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com) - Nick Mathison (nick.matison@delphix.com)
+//
+pipeline {
+   agent any
+   stages {
+      stage('Create Postgres_TEST VDB') {
+         steps {
+               provisionVDBFromSnapshot autoSelectRepository: true, credentialId: 'DCT-API-KEY-JENKINS-PLUGIN', engineId: '1', environmentId: 'Postgres_Target', environmentUserId: 'postgres', 
+                     jsonParam: ''' {appdata_source_params: {
+                        postgresPort: 5600,
+                        mountLocation: "/mnt/provision/pg_test",
+                        configSettingsStg: [{
+                           propertyName: "listen_addresses",
+                           value: "*",
+                           commentProperty: false
+                        }]
+                     } }''', name: 'Postgres_TEST', sourceDataId: 'Postgres_master', targetGroupId: 'QA'
+         }
+      }
+   }
+}

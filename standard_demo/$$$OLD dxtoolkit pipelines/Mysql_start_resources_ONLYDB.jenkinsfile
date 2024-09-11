@@ -1,0 +1,38 @@
+//
+// Pipeline to start Mysql Resources (NO Environment Start)
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('start Mysql DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Mysql_master'"
+            sh "exit 0"
+         }
+      }
+      stage('start Mysql VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Start_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Mysql_MASK'"
+                      sh "exit 0"
+                    },
+                Start_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Mysql QA' -action enable"
+                      sh "exit 0"
+                    },
+                Start_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Mysql DEV' -action enable"
+                      sh "exit 0"
+                }
+            )
+         }
+      }
+   }
+}

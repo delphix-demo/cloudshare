@@ -1,0 +1,55 @@
+//
+// Pipeline to Create Oracle Ephemeral VDB
+//
+// Demo:  Standard Demo
+//
+// 2023 (c) Delphix - Ruben Catarrunas
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+	  stage('Read PROD Data') {
+        agent { label 'Oracle Source' }
+        steps {
+            sh "bash /home/delphix/mask_oracle_read_prod.sh"
+         }
+       }
+      
+    
+      stage('Create VDBS') {
+         agent { label 'devops' }
+         steps {
+             parallel(
+              Create_EPHEMASK: {sh "/home/delphix/dxtoolkit2/dx_provision_vdb -d democde1 -sourcename Oracle_master -dbname MASKEPHE -targetname MASKEPHE -group 'Ephemeral Demo' -environment Oracle_Target_Ephemeral -type oracle -envinst '/u01/oracle/oracle19c'"},
+              Create_ORAEPHE:  {sh "/home/delphix/dxtoolkit2/dx_provision_vdb -d democde1 -sourcename Oracle_master -dbname ORAEPHE -targetname ORAEPHE  -group 'Ephemeral Demo' -environment Oracle_Target_Ephemeral -type oracle -envinst '/u01/oracle/oracle19c'"}
+            ) 
+         }
+      }
+      
+      stage('Work on VDB ORAEPHE') {
+        agent { label 'Oracle Target New' }
+         steps { sh "bash /home/delphix/remove_lines_oracle_VDB.sh" }
+      }
+	  
+	  stage('Mask on VDB MASKEPHE') {
+         agent { label 'devops' }
+         steps { sh "cd /home/delphix && ./dxmc job start --engine demomask1 --envname Oracle --jobname 'MASKEPHE mask' --tgt_connector 'MASKEPHE'" }
+      }
+	  
+	  stage('Read Masked Data') {
+         agent { label 'Oracle Target New' }
+         steps { sh "bash /home/delphix/mask_oracle_read_ephe.sh" }
+      }
+
+      stage('Destroy VDBS') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+              Destruir_VDB1:{sh "/home/delphix/dxtoolkit2/dx_remove_db -d democde1 -skip -name 'ORAEPHE'"},
+			  Destruir_VDB2:{sh "/home/delphix/dxtoolkit2/dx_remove_db -d democde1 -skip -name 'MASKEPHE'"}
+		    )
+         }
+      }
+   }
+}

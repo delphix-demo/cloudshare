@@ -1,0 +1,80 @@
+pipeline {   
+
+    agent none
+
+    environment {
+        DLPX_ENGINE = "10.160.0.10"
+        DLPX_TARGET = "10.160.0.20"
+        DLPX_USER = "admin"
+        DLPX_PASSWORD = "delphix"
+        DXTOOLKIT_CONF = "/config/dxtools.conf"
+    }
+
+
+    stages { 
+
+        stage('Prepare docker') {
+            agent {
+                label "oracle_target"
+            }
+            steps {
+                sh """
+                sudo systemctl restart docker 
+                """
+            }
+        }
+        
+        stage('Configure Engine') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh '/dxtoolkit/dx_config -convert todxconf -text myengine,$DLPX_ENGINE,80,$DLPX_USER,$DLPX_PASSWORD,true,http -configfile $DXTOOLKIT_CONF'
+                sh '/dxtoolkit/dx_get_appliance -configfile $DXTOOLKIT_CONF'
+            }
+        }
+
+
+        stage('Start database') {
+            agent {
+                label "oracle_target"
+            }
+            steps {
+                sh """
+                export JENKINS_NODE_COOKIE=dontKillMe 
+                /home/oracle/start_ora11g.sh 
+                """
+            }
+        }
+
+        stage('Discover Environment') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_create_env -d myengine -envname singlenode -envtype unix -host $DLPX_TARGET -username delphix -authtype password -password delphix -toolkitdir '/home/delphix'"
+            }
+        }
+
+        stage('Create DSource') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_ctl_dsource -d myengine -type oracle -sourcename ora11g -sourceinst /u01/app/oracle/product/11.2.0.4/db_1 -sourceenv singlenode -source_os_user delphix -dbuser delphix -password delphix -group 'Oracle 11g Sources' -creategroup -dsourcename ora11g -action create"
+            }
+        }
+    }
+}

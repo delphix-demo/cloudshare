@@ -1,0 +1,79 @@
+//
+// Pipeline for Secure Delivery of Postgres/Filesystem Custom application datasource - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Delete previous bookmarks') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            /home/delphix/dct-toolkit delete_bookmark bookmark_id='CMS_MASK_custom_after_masking' || true
+            """
+         }
+      }
+      stage('Snap Production') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Snap_Postgres: {
+                      sh "/home/delphix/mask_read_prod.sh"
+                      sh "/home/delphix/dct-toolkit snapshot_dsource dsource_id='Postgres_cust_master'"
+                    },
+                Snap_FS: {
+                      sh "/home/delphix/dct-toolkit snapshot_dsource dsource_id='AppFS_cust_master'"
+                }
+            )
+          }
+      }
+      stage('Refresh MASK') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_Postgres: {
+                      sh "/home/delphix/dct-toolkit refresh_vdb_by_snapshot vdb_id='Postgres_cust_MASK'"
+                    },
+                Refresh_FS: {
+                      sh "/home/delphix/dct-toolkit refresh_vdb_by_snapshot vdb_id='AppFS_cust_MASK'"
+                }
+            )
+         }
+      }
+      stage('Run MASK job') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit execute_masking_job engine_id=CCE1 masking_job_id='Drupal 9 Custom App Masking'"
+         }
+      }
+      stage('Bookmark MASK') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /home/delphix/dct-toolkit create_bookmark vdb_ids="Postgres_MASK,AppFS_MASK" name='CMS_MASK_custom_after_masking'
+            """
+         }
+      }
+      stage('Refresh DEV and QA from a Bookmark') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_QA: {
+                      sh """
+                         /home/delphix/dct-toolkit refresh_vdb_group vdb_group_id='CMS_QA' bookmark_id='CMS_MASK_custom_after_masking'
+                      """
+                    },
+                Refresh_DEV: {
+                      sh """
+                         /home/delphix/dct-toolkit refresh_vdb_group vdb_group_id='CMS_DEV' bookmark_id='CMS_MASK_custom_after_masking'
+                      """
+                }
+            )
+         }
+      }    
+   }
+}

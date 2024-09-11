@@ -1,0 +1,46 @@
+//
+// Pipeline to stop Mysql Resources
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('stop Mysql DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Mysql_master'"
+            sh "exit 0"
+         }
+      }
+      stage('stop Mysql VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Stop_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Mysql_MASK'"
+                      sh "exit 0"
+                    },
+                Stop_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Mysql QA' -action disable"
+                      sh "exit 0"
+                    },
+                Stop_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Mysql DEV' -action disable"
+                      sh "exit 0"
+                }
+            )
+         }
+      }
+      stage('Disable Mysql environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Oracle_Target' -action disable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Oracle_Source' -action disable"
+            sh "exit 0"
+         }
+      }
+   }
+}

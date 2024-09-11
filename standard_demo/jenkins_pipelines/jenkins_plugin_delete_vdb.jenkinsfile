@@ -1,0 +1,17 @@
+//
+// Pipeline to Delete Postgres VDB
+//
+// Demo:  Standard Demo
+//
+// 2023 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com) - Nick Mathison (nick.matison@delphix.com)
+//
+pipeline {
+   agent any
+   stages {
+      stage('Create Postgres_TEST VDB') {
+         steps {
+            deleteVDB credentialId: 'DCT-API-KEY-JENKINS-PLUGIN', name: 'Postgres_TEST'
+         }
+      }
+   }
+}

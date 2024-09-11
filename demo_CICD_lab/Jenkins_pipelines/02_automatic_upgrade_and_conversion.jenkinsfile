@@ -1,0 +1,298 @@
+pipeline {   
+
+    agent none
+
+    environment {
+        DLPX_ENGINE = "10.160.0.10"
+        DLPX_TARGET = "10.160.0.20"
+        DLPX_USER = "admin"
+        DLPX_PASSWORD = "delphix"
+        DXTOOLKIT_CONF = "/config/dxtools.conf"
+    }
+
+
+    stages { 
+
+        stage('Configure connection to Engine') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh '/dxtoolkit/dx_config -convert todxconf -text myengine,$DLPX_ENGINE,80,$DLPX_USER,$DLPX_PASSWORD,true,http -configfile $DXTOOLKIT_CONF'
+                sh '/dxtoolkit/dx_get_appliance -configfile $DXTOOLKIT_CONF'
+            }
+        }
+
+       
+        stage('Provision VDB') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_provision_vdb -d myengine -sourcename ora11g -dbname gcopy -targetname gcopy -group 'Golden Copies' -creategroup -environment singlenode -type oracle -envinst '/u01/app/oracle/product/11.2.0.4/db_1' -redoGroup 3 -redoSize 1024"
+            }
+        }
+
+        stage('Clean oratab') {
+            agent {
+                label "oracle_target"
+            }
+            steps {
+                sh "/home/oracle/clean_oratab.sh > /tmp/oratab_`date \"+%Y-%m-%d_%H:%M\"`.log"
+            }
+            
+        }
+
+
+        stage('Upgrade to 19c') {
+            agent {
+                label "oracle_target"
+            }
+            steps {
+                sh "/home/oracle/upgrd.sh /u01/app/oracle/product/19.0.0/dbhome_1 /u01/app/oracle > /tmp/upgrade_`date \"+%Y-%m-%d_%H:%M\"`.log"
+            }
+            
+        }
+
+        stage('Switch OH') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_upgrade_db -d myengine -name gcopy -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'"
+            }
+            
+        }
+
+
+
+        stage('Add hook') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh '''
+                cat <<FOE>/config/presnap.hook
+                #!/bin/sh
+
+                sqlplus "/ AS SYSDBA" <<-EOF
+                whenever sqlerror exit 2;
+                spool /tmp/presnapshot.out replace
+                shutdown immediate
+                startup mount pfile='\\$DELPHIX_MOUNT_PATH/\\$DELPHIX_DATABASE_UNIQUE_NAME/script/\\$DELPHIX_DATABASE_UNIQUE_NAME/init\\$ORACLE_SID.ora'
+                alter database open read only;
+                exec dbms_pdb.describe(pdb_descr_file=>'\\$DELPHIX_MOUNT_PATH/\\$DELPHIX_DATABASE_UNIQUE_NAME/datafile/delphix_plugin.xml');
+                exit;
+                EOF
+                '''.stripIndent()
+                sh "/dxtoolkit/dx_ctl_dbhooks -d myengine -action set -hook presnaphook,/config/presnap.hook,BASH -hooktype preSnapshot -dbname gcopy"
+            }
+            
+        }
+
+        stage('stop database') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_ctl_db -d myengine -action stop -name gcopy -force onfailure"
+            }
+            
+        }
+
+
+        stage('Make sure database is running') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_ctl_db -d myengine -action start -name gcopy"
+            }
+            
+        }
+
+
+        stage('Run Snapsync') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_snapshot_db -d myengine -name gcopy"
+            }
+            
+        }
+
+
+        stage('Add script') {
+            agent {
+                label "oracle_target"
+            }
+            steps {
+                sh '''
+                cat <<FOE>/home/delphix/dx-post-plug-hook.sh
+                #!/bin/sh
+
+                DELPHIX_PDB_NAME=\\$1
+                SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+                CONVERT_LOGFILE=\\$SCRIPT_DIR/\\$DELPHIX_PDB_NAME-pdbconvert.log
+
+                sqlplus "/ AS SYSDBA" <<-EOF
+                whenever sqlerror exit 2;
+                spool \\$CONVERT_LOGFILE replace
+                alter session set container=\\$DELPHIX_PDB_NAME;
+                @?/rdbms/admin/noncdb_to_pdb.sql
+                exit;
+                EOF
+                FOE
+                '''.stripIndent()
+                sh "chmod +x /home/delphix/dx-post-plug-hook.sh"
+            }
+            
+        }
+
+        stage('Run MT script') {
+            agent {
+                label "oracle_target"
+            }
+            steps {
+                sh "chmod +x /home/oracle/convert_to_mt.sh"
+                sh "/home/oracle/convert_to_mt.sh > /tmp/convert_to_mt_`date +%Y-%m-%d_%H:%M`.log"
+            }
+        }
+
+        stage('Provision 3 vPDBs') {
+            parallel {
+                stage('vpuser1') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_provision_vdb -d myengine -type oracle -group 'Final User VDBs' -sourcename 'mtgcopy'  -srcgroup 'Golden Copies'  -targetname vpuser1  -dbname vpuser1 -environment singlenode  -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'  -envUser delphix   -vcdbname cuser1 -vcdbdbname cuser1 -vcdbgroup 'Final User VDBs' -creategroup -mntpoint '/mnt/provision'"
+                    }
+                    
+                }
+                stage('vpuser2') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "sleep 5"
+                        sh "/dxtoolkit/dx_provision_vdb -d myengine -type oracle -group 'Final User VDBs' -sourcename 'mtgcopy'  -srcgroup 'Golden Copies'  -targetname vpuser2  -dbname vpuser2 -environment singlenode  -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'  -envUser delphix   -vcdbname cuser2 -vcdbdbname cuser2 -vcdbgroup 'Final User VDBs' -creategroup -mntpoint '/mnt/provision'"
+                    }
+                    
+                }
+                stage('vpuser3') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "sleep 5"
+                        sh "/dxtoolkit/dx_provision_vdb -d myengine -type oracle -group 'Final User VDBs' -sourcename 'mtgcopy'  -srcgroup 'Golden Copies'  -targetname vpuser3  -dbname vpuser3 -environment singlenode  -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'  -envUser delphix   -vcdbname cuser3 -vcdbdbname cuser3 -vcdbgroup 'Final User VDBs' -creategroup -mntpoint '/mnt/provision'"
+                    }
+                    
+                }
+            }
+            
+        }
+
+        stage('Create template') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh "/dxtoolkit/dx_ctl_js_template -d myengine -source 'Golden Copies,mtgcopy,mtgcopy,1'  -action create -template_name Myapp_template"
+            }
+            
+        }
+
+        stage('Create 3 containers') {
+            parallel {
+                stage('container1') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_ctl_js_container -d  myengine -action create -container_def 'Final User VDBs,vpuser1' -container_name container1 -template_name Myapp_template -container_owner admin -dontrefresh"
+                    }
+                    
+                }
+                stage('container2') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_ctl_js_container -d  myengine -action create -container_def 'Final User VDBs,vpuser2' -container_name container2 -template_name Myapp_template -container_owner admin -dontrefresh"
+                    }
+                    
+                }
+                stage('container3') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_ctl_js_container -d  myengine -action create -container_def 'Final User VDBs,vpuser3' -container_name container3 -template_name Myapp_template -container_owner admin -dontrefresh"
+                    }
+                    
+                }
+            }
+        }
+
+    }
+}
+

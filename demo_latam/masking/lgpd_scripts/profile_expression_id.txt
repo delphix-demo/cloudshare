@@ -1,0 +1,1 @@
+{"profileExpressionId":161,"domainName":"BR_EMAIL","expressionName":"BR_EMAIL_META","regularExpression":"ˆ(email|e-mail|mail)$","createdBy":"admin","dataLevelProfiling":false}

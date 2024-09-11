@@ -1,0 +1,71 @@
+//
+// Pipeline to Create Postgres and AppFS Custom Self-Service Resources - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create Postgres_MASK Custom VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_cust_master' name='Postgres_cust_MASK' postgres_port='5442' environment_id='Postgres_Target' environment_user_id='postgres' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision/postgres_cust_MASK'"
+         }
+      }
+      stage('Create Postgres DEV and QA VDB Custom from MASK') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_DEV: {
+                      sh "/home/delphix/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_cust_MASK' name='Postgres_cust_DEV' postgres_port='6430' environment_id='Postgres_Target' environment_user_id='postgres' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision/postgres_cust_DEV'"
+                    },
+                Create_QA: {
+                      sh "/home/delphix/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_cust_MASK' name='Postgres_cust_QA' postgres_port='7430' environment_id='Postgres_Target' environment_user_id='postgres' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision/postgres_cust_QA'"
+                }
+            )
+         }
+      }
+      stage('Create AppFS_MASK Custom VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            /home/delphix/dct-toolkit provision_vdb_by_snapshot appdata source_data_id='AppFS_cust_master' name='AppFS_cust_MASK' environment_id='Postgres_Target' environment_user_id='delphix' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision/AppFS_cust_MASK' appdata_source_params='{}'
+            """
+         }
+      }
+      stage('Create AppFS DEV and QA VDB Custom from MASK') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_DEV: {
+                      sh """
+                      /home/delphix/dct-toolkit provision_vdb_by_snapshot appdata source_data_id='AppFS_cust_MASK' name='AppFS_cust_DEV' environment_id='Postgres_Target' environment_user_id='delphix' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision/AppFS_cust_DEV'  configure_clone='[{"shell":"bash", "command":"./cfg_start_drupal_cust_dev.sh", "name": "Cfg and start DEV"}]' pre_refresh='[{"shell":"bash", "command":"./stop_drupal_cust_dev.sh", "name": "Stop DEV"}]' post_refresh='[]' pre_snapshot='[]' post_snapshot='[]' pre_start='[]' post_start='[{"shell":"bash", "command":"./start_drupal_cust_dev.sh", "name": "Start DEV"}]' pre_stop='[{"shell":"bash", "command":"./stop_drupal_cust_dev.sh", "name": "Stop DEV"}]' post_stop='[]' pre_self_refresh='[{"shell":"bash", "command":"./stop_drupal_cust_dev.sh", "name": "Stop DEV"}]'  post_self_refresh='[{"shell":"bash", "command":"./start_drupal_cust_dev.sh", "name": "Start DEV"}]' appdata_source_params='{}'
+                      """
+                },
+                Create_QA: {
+                      sh """
+                      /home/delphix/dct-toolkit provision_vdb_by_snapshot appdata source_data_id='AppFS_cust_MASK' name='AppFS_cust_QA' environment_id='Postgres_Target' environment_user_id='delphix' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision/AppFS_cust_QA'  configure_clone='[{"shell":"bash", "command":"./cfg_start_drupal_cust_qa.sh", "name": "Cfg and start QA"}]' pre_refresh='[{"shell":"bash", "command":"./stop_drupal_cust_qa.sh", "name": "Stop QA"}]' post_refresh='[]' pre_snapshot='[]' post_snapshot='[]' pre_start='[]' post_start='[{"shell":"bash", "command":"./start_drupal_cust_qa.sh", "name": "Start QA"}]' pre_stop='[{"shell":"bash", "command":"./stop_drupal_cust_qa.sh", "name": "Stop QA"}]' post_stop='[]' pre_self_refresh='[{"shell":"bash", "command":"./stop_drupal_cust_qa.sh", "name": "Stop QA"}]'  post_self_refresh='[{"shell":"bash", "command":"./start_drupal_cust_qa.sh", "name": "Start QA"}]' appdata_source_params='{}'
+                      """
+               }
+            )
+         }
+      }
+      stage('Create VDB Groups') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            /home/delphix/dct-toolkit create_vdb_group name='CMS_CUST_MASK' vdb_ids='["Postgres_cust_MASK","AppFS_cust_MASK"]'
+            """
+            sh """
+            /home/delphix/dct-toolkit create_vdb_group name='CMS_CUST_DEV' vdb_ids='["Postgres_cust_DEV","AppFS_cust_DEV"]'
+            """
+            sh """
+            /home/delphix/dct-toolkit create_vdb_group name='CMS_CUST_QA' vdb_ids='["Postgres_cust_QA","AppFS_cust_QA"]'
+            """
+         }
+      }
+   }
+}

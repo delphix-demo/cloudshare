@@ -1,0 +1,91 @@
+def user_input = ''
+
+pipeline {
+    agent none
+
+    environment {
+        DLPX_ENGINE = "10.160.0.10"
+        DLPX_CRED = credentials('delphix_engine_credentials')
+        DLPX_TEMPLATE = "Myapp_template"
+        DLPX_CONTAINER = "fixerdb"
+    }
+
+    stages {
+
+        stage('Configure db pipeline interface') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                sh '/dxtoolkit/dx_config -convert todxconf -text hostname,$DLPX_ENGINE,80,$DLPX_CRED_USR,$DLPX_CRED_PSW,true,http -configfile /config/dxtools.conf'
+                sh '/dxtoolkit/dx_get_appliance -configfile /config/dxtools.conf'
+            }
+        }
+
+   
+        stage('Get snapshots') {
+                    agent {
+                        docker {
+                                image 'pioro/dxtoolkit:latest'
+                                args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                                reuseNode true
+                        }
+                    }
+                    steps {
+                        sh "/dxtoolkit/dx_get_js_bookmarks -format csv -nohead -container_name $DLPX_CONTAINER -template_name $DLPX_TEMPLATE > $WORKSPACE/snapshots.csv"
+                    }
+        }
+
+        stage('Select snapshot to restore') {
+            agent any
+            steps {
+                script {                    
+                    def file = readFile 'snapshots.csv'
+                    def lines = file.readLines()
+                    def artifacts = []
+                    for (i in lines) {
+                        def (engine, name, rest ) = i.split(',')
+                        if (name.contains('demo')) {
+                            artifacts.add(name)
+                        }
+                    }
+                    user_input = input(
+                        id: 'userInput', message: 'input parameters', parameters: [
+                            [
+                                $class: 'ChoiceParameterDefinition',
+                                name: 'Snapshot',
+                                choices: artifacts,
+                                description: 'Snapshot',
+                            ],
+                            [   
+                                $class: 'TextParameterDefinition', 
+                                description: 'Branch name', 
+                                name: 'branch'
+                            ]
+                        ]
+                    )
+                }
+            }
+        }
+        stage('Restore snapshot to fixerdb') {
+            agent {
+                docker {
+                        image 'pioro/dxtoolkit:latest'
+                        args '-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config'
+                        reuseNode true
+                }
+            }
+            steps {
+                echo "${user_input.Snapshot}"
+                echo "${user_input.branch}"
+                sh "/dxtoolkit/dx_ctl_js_branch -action create -branch_name '${user_input.branch}' -timestamp ${user_input.Snapshot} -container_name $DLPX_CONTAINER -template_name $DLPX_TEMPLATE"   
+            }
+        }
+
+    
+    }
+}

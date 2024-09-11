@@ -1,0 +1,158 @@
+pipeline {
+
+   agent any
+
+   environment {
+      DLPX_ENGINE = "10.160.0.10"
+      DLPX_USER = "admin"
+      DLPX_PASSWORD = "delphix"
+      DLPX_TEMPLATE = "Myapp_template"
+      DLPX_EXPIRATION = "2023-12-24T20:15:00.000Z"
+      DXTOOLKIT_CONF = "/config/dxtools.conf"
+   }
+   stages {
+      stage("Set Bookmark names") {
+        steps {
+            wrap([$class: 'BuildUser']) {
+                script {
+                    USER_ID = "${BUILD_USER_ID}"
+                    DLPX_BOOKMARK_BEFORE_START ="${USER_ID}_${JOB_NAME}_${BUILD_NUMBER}_BEFORE_START"
+                    DLPX_BOOKMARK_AFTER_TEST1 = "${USER_ID}_${JOB_NAME}_${BUILD_NUMBER}_AFTER_TEST1"
+                    DLPX_BOOKMARK_AFTER_TEST2 = "${USER_ID}_${JOB_NAME}_${BUILD_NUMBER}_AFTER_TEST2"
+                    DLPX_BOOKMARK_AFTER_TEST3 = "${USER_ID}_${JOB_NAME}_${BUILD_NUMBER}_AFTER_TEST3"
+                    DLPX_BOOKMARK_AFTER_TEST4 = "${USER_ID}_${JOB_NAME}_${BUILD_NUMBER}_AFTER_TEST4"
+                    DLPX_BRANCH_NEW = "${USER_ID}_Jenkins_BRANCH_${JOB_NAME}_${BUILD_NUMBER}"
+                }
+            }
+        }
+      }
+
+      stage('Create Bookmark before start') {
+         agent {
+               docker {
+                     image 'delphixautomation/selfservice-automation:latest'
+                     args '-u root'
+               }
+         }
+         steps {
+            sh "python3 -u /dlpx/api_op_bookmark.py $DLPX_USER $DLPX_PASSWORD $DLPX_ENGINE $DLPX_TEMPLATE container1  $DLPX_BOOKMARK_BEFORE_START CURRENT_TIME $DLPX_EXPIRATION CREATE true"
+         }
+      }
+
+      stage('Execute test 1') {
+         agent { 
+            label 'oracle_target' 
+         }
+         steps {
+            sh "/home/oracle/test.sh TEST1"
+         }
+      }
+
+      stage('Create Bookmark after TEST1') {
+         agent {
+               docker {
+                     image 'delphixautomation/selfservice-automation:latest'
+                     args '-u root'
+               }
+         }
+         steps {
+            sh "python3 -u /dlpx/api_op_bookmark.py $DLPX_USER $DLPX_PASSWORD $DLPX_ENGINE $DLPX_TEMPLATE container1  $DLPX_BOOKMARK_AFTER_TEST1 CURRENT_TIME $DLPX_EXPIRATION CREATE true"
+         }
+      }
+
+      stage('Execute test 2') {
+         agent { 
+            label 'oracle_target' 
+         }
+         steps {
+            sh "/home/oracle/test.sh TEST2"
+         }
+      }
+
+      stage('Create Bookmark after TEST2') {
+         agent {
+               docker {
+                     image 'delphixautomation/selfservice-automation:latest'
+                     args '-u root'
+               }
+         }
+         steps {
+            sh "python3 -u /dlpx/api_op_bookmark.py $DLPX_USER $DLPX_PASSWORD $DLPX_ENGINE $DLPX_TEMPLATE container1  $DLPX_BOOKMARK_AFTER_TEST2 CURRENT_TIME $DLPX_EXPIRATION CREATE true"
+         }
+      }
+
+      stage('Execute test 3') {
+         agent { 
+            label 'oracle_target' 
+         }
+         steps {
+            sh "/home/oracle/test.sh TEST3"
+         }
+      }
+
+      stage('Create Bookmark after TEST3') {
+         agent {
+               docker {
+                     image 'delphixautomation/selfservice-automation:latest'
+                     args '-u root'
+               }
+         }
+         steps {
+            sh "python3 -u /dlpx/api_op_bookmark.py $DLPX_USER $DLPX_PASSWORD $DLPX_ENGINE $DLPX_TEMPLATE container1  $DLPX_BOOKMARK_AFTER_TEST3 CURRENT_TIME $DLPX_EXPIRATION CREATE true"
+         }
+      }
+
+
+      stage('Rewind VDB to before TEST1') {
+         agent {
+               docker {
+                     image 'delphixautomation/selfservice-automation:latest'
+                     args '-u root'
+               }
+         }
+         steps {
+            sh "python3 -u /dlpx/api_op_container.py $DLPX_USER $DLPX_PASSWORD $DLPX_ENGINE $DLPX_TEMPLATE container1 RESTORE $DLPX_BOOKMARK_BEFORE_START"
+         }
+      }
+
+      stage('Execute test 4') {
+         agent { 
+            label 'oracle_target' 
+         }
+         steps {
+            sh "/home/oracle/test.sh TEST4"
+         }
+      }
+
+      stage('Create Bookmark after TEST4') {
+         agent {
+               docker {
+                     image 'delphixautomation/selfservice-automation:latest'
+                     args '-u root'
+               }
+         }
+         steps {
+            sh "python3 -u /dlpx/api_op_bookmark.py $DLPX_USER $DLPX_PASSWORD $DLPX_ENGINE $DLPX_TEMPLATE container1  $DLPX_BOOKMARK_AFTER_TEST4 CURRENT_TIME $DLPX_EXPIRATION CREATE true"
+         }
+      }
+
+   }
+   post {
+        always {
+
+            script {
+               docker.image('pioro/dxtoolkit:latest').inside('-u root -w /dxtoolkit -v /home/delphix/config/${JOB_NAME}:/config') {
+                  stage('Rollback to initial state') {
+                     sh """
+                     /dxtoolkit/dx_config -convert todxconf -text myengine,$DLPX_ENGINE,80,$DLPX_USER,$DLPX_PASSWORD,true,http -configfile $DXTOOLKIT_CONF
+                     /dxtoolkit/dx_get_appliance -configfile $DXTOOLKIT_CONF
+                     /dxtoolkit/dx_ctl_js_container -configfile $DXTOOLKIT_CONF -d myengine -timestamp $DLPX_BOOKMARK_BEFORE_START -container_name container1 -action restore -template_name $DLPX_TEMPLATE
+                     """
+                  }
+               }
+            }
+        }
+    }
+}
+
+

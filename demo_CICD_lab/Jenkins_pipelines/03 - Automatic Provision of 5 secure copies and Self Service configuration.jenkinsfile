@@ -1,0 +1,65 @@
+node {
+  def remote = [:]
+  remote.name = 'oracle_target'
+  remote.host = '10.160.0.20'
+  remote.user = 'oracle'
+  remote.password = 'delphix'
+  remote.allowAnyHosts = true
+    /*stage('Configuring environments') {
+        sshCommand remote: remote, command: "source /home/oracle/start_nc11.2.sh"
+        sh 'sleep 5'
+    } */
+stage('Provision Secure copies') {
+    parallel 'Secure Copy1': {
+        stage('Secure Copy1') {
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_provision_vdb -d myengine -sourcename vdb1 -dbname sc1 -targetname sc1 -group 'Masked Copy' -creategroup -environment singlenode -type oracle -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'"
+        }
+    }, 'Secure Copy2': {
+        stage('Secure Copy2') {
+            sh 'sleep 10'
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_provision_vdb -d myengine -sourcename vdb1 -dbname sc2 -targetname sc2 -group 'Masked Copy' -environment singlenode -type oracle -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'"
+        }
+    }, 'Secure Copy3': {
+        stage('Secure Copy3') {
+            sh 'sleep 10'
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_provision_vdb -d myengine -sourcename vdb1 -dbname sc3 -targetname sc3 -group 'Masked Copy' -environment singlenode -type oracle -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'"
+        }
+    }, 'Secure Copy4': {
+        stage('Secure Copy4') {
+            sh 'sleep 10'
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_provision_vdb -d myengine -sourcename vdb1 -dbname sc4 -targetname sc4 -group 'Masked Copy' -environment singlenode -type oracle -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'"
+        }
+    }, 'Secure Copy5': {
+        stage('Secure Copy5') {
+            sh 'sleep 10'
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_provision_vdb -d myengine -sourcename vdb1 -dbname sc5 -targetname sc5 -group 'Masked Copy' -environment singlenode -type oracle -envinst '/u01/app/oracle/product/19.0.0/dbhome_1'"
+        }
+    }
+}
+    stage('Create Self Service Template') {
+        sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_template -d myengine -source 'Oracle 19c Virtual Databases,vdb1,vdb1,1'  -action create -template_name Masked_template"
+    }
+stage('Create Self Service Containers') {
+    parallel 'Container1': {
+        stage('Container1') {
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_container -d myengine -action create -container_def 'Masked Copy,sc1' -container_name container1 -template_name Masked_template -container_owner admin -dontrefresh"
+        }
+    }, 'Container2': {
+        stage('Container2') {
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_container -d myengine -action create -container_def 'Masked Copy,sc2' -container_name container2 -template_name Masked_template -container_owner admin -dontrefresh"
+        }
+    }, 'Container3': {
+        stage('Container2') {
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_container -d myengine -action create -container_def 'Masked Copy,sc3' -container_name container3 -template_name Masked_template -container_owner admin -dontrefresh"
+        }
+    }, 'Container4': {
+        stage('Container2') {
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_container -d myengine -action create -container_def 'Masked Copy,sc4' -container_name container4 -template_name Masked_template -container_owner admin -dontrefresh"
+        }
+    }, 'Container5': {
+        stage('Container2') {
+            sshCommand remote: remote, command: "/home/delphix/dxtoolkit2/dx_ctl_js_container -d myengine -action create -container_def 'Masked Copy,sc5' -container_name container5 -template_name Masked_template -container_owner admin -dontrefresh"
+        }
+    }
+    }
+}

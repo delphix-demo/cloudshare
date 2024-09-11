@@ -1,0 +1,42 @@
+//
+// Pipeline to stop Ase Resources
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Ruben Catarrunas (ruben.catarrunas@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('stop Ase DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action disable -name 'Ase_1_master'"
+            sh "exit 0"
+         }
+      }
+      stage('stop Ase VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Stop_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action disable -name 'Ase_1_MASK'"
+                    },
+                Stop_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Ase QA' -action disable"
+                    },
+                Stop_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Ase DEV' -action disable"
+                }
+            )
+         }
+      }
+      stage('disable Ase environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Ase_Target' -action disable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Ase_Source' -action disable"
+         }
+      }
+   }
+}

@@ -1,0 +1,42 @@
+//
+// Pipeline to start DB2 Resources
+//
+// Demo:  Standard Demo
+//
+// 2023 (c) Delphix - DB2 Pipelines 
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('enable DB2 environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde6 -name 'DB2_Source' -action enable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde6 -name 'DB2_Target' -action enable"
+         }
+      }
+      stage('start DB2 dSource') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action enable -name 'db2_master'"
+            sh "exit 0"
+         }
+      }
+      stage('start DB2 VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Start_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action enable -name 'DB2_MASK'"
+                    },
+                Start_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action enable -name 'DB2_QA'"
+                    },
+                Start_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action enable -name 'DB2_DEV'"
+                }
+            )
+         }
+      }
+   }
+}

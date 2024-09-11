@@ -1,0 +1,42 @@
+//
+// Pipeline to stop Oracle Resources
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('stop Oracle DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Oracle_master'"
+            sh "exit 0"
+         }
+      }
+      stage('stop Oracle VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Stop_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Oracle_MASK'"
+                    },
+                Stop_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle QA' -action disable"
+                    },
+                Stop_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle DEV' -action disable"
+                }
+            )
+         }
+      }
+      stage('Disable Oracle environments') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Oracle_Target' -action disable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Oracle_Source' -action disable"
+         }
+      }
+   }
+}

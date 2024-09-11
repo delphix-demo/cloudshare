@@ -1,0 +1,38 @@
+//
+// Pipeline for File Masking (CSV/XML)
+//
+// Demo:  Standard Demo
+//
+// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Run MASK job for CSV File Masking') {
+         agent { label 'devops' }
+         steps {
+            sh "cd /home/delphix && ./dxmc job start --engine demomask1 --envname 'Files Target' --jobname 'Mask_CSV_anagrafe' --tgt_connector 'Files source'"
+         }
+      }
+      stage('Show CSV source and masked files') {
+         agent { label 'Postgres Source' }
+         steps {
+            sh "printf 'Showing first rows of source CSV file\n\n' && cut -d ',' -f 1,5,7,8 /home/delphix/anagrafe_files/anagrafe_202107191057.csv | head -10"
+            sh "printf 'Showing first rows of MASKED CSV file\n\n' && cut -d ',' -f 1,5,7,8 /home/delphix/anagrafe_files_masked/anagrafe_202107191057.csv | head -10"
+         }
+      }
+      stage('Run MASK job for XML File Masking') {
+        agent { label 'devops' }
+        steps {
+           sh "cd /home/delphix && ./dxmc job start --engine demomask1 --envname 'Files Target' --jobname 'Mask_XML_anagrafe' --tgt_connector 'Files source'"
+        }
+     }
+     stage('Show XML source and masked files') {
+        agent { label 'Postgres Source' }
+        steps {
+           sh "printf 'Showing first rows of source XML file\n\n' && grep -A14 '<DATA_RECORD>' /home/delphix/anagrafe_files/anagrafe_202107191058.xml -m 1"
+           sh "printf 'Showing first rows of MASKED XML file\n\n' && grep -A14 '<DATA_RECORD>' /home/delphix/anagrafe_files_masked/anagrafe_202107191058.xml -m 1"
+        }
+     }
+  }
+}

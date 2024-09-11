@@ -1,0 +1,50 @@
+//
+// Delphix Postgres Liquibase Demo - DCT Version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+// 
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Refresh DB Postgres_DEV_lbase with Prod') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit refresh_vdb_by_snapshot vdb_id='Postgres_DEV_lbase'"
+         }
+      }
+      stage('Check Prod and Postgres_DEV_lbase have same structure') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/liquidemo_check_structures.sh"
+         }
+      }
+      stage('Alter Postgres_DEV_lbase structure') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/liquidemo_alter_structure.sh"
+         }
+      }
+      stage('Get Delta between Postgres_DEV_lbase and Prod') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/liquidemo_get_delta.sh"
+         }
+      }
+      stage('Refresh DB Postgres_DEV_lbase with Prod - loose changes') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit refresh_vdb_by_snapshot vdb_id='Postgres_DEV_lbase'"
+         }
+      }
+      stage('Apply and verify Liquibase Delta') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/liquidemo_apply_verify_delta.sh"
+         }
+      }
+   }
+}

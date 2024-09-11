@@ -1,0 +1,38 @@
+//
+// Pipeline to start Mysql Resources (eithout starting environments) - DCT version
+//
+// Demo:  Standard Demo
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('start Mysql DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dct-toolkit enable_dsource dsource_id='Mysql_master'"
+            sh "exit 0"
+         }
+      }
+      stage('start Mysql VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Start_MASK: {
+                      sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Mysql_MASK'"
+                      sh "exit 0"
+                    },
+                Start_QA: {
+                      sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Mysql_QA'"
+                      sh "exit 0"
+                    },
+                Start_DEV: {
+                      sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Mysql_DEV'"
+                      sh "exit 0"
+                }
+            )
+         }
+      }
+   }
+}
