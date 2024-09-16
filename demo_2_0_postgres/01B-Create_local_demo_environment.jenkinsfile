@@ -22,7 +22,7 @@ pipeline {
          steps {
             sh """
                /root/dct-toolkit link_appdata_database source_id="Postgres_master" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_master","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.29", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5433, "configSettingsStg":[]}' 
-               sleep 30
+               sleep 60
             """
          }
       }
