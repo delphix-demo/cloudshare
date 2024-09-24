@@ -12,9 +12,11 @@ pipeline {
       stage('Destroy VDB Custom Groups') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_CUST_MASK'"
-            sh "/home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_CUST_DEV'"
-            sh "/home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_CUST_QA'"
+            sh """
+            /home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_CUST_MASK'
+            /home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_CUST_DEV'
+            /home/delphix/dct-toolkit delete_vdb_group vdb_group_id='CMS_CUST_QA'
+            """
          }
       }
       stage('Destroy Postgres DEV and QA Custom VDB') {
