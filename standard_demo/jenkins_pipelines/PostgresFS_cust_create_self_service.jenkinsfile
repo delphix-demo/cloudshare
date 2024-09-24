@@ -57,13 +57,13 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-            /home/delphix/dct-toolkit create_vdb_group name='CMS_CUST_MASK' vdb_ids='["Postgres_cust_MASK","AppFS_cust_MASK"]'
+            /home/delphix/dct-toolkit create_vdb_group name='CMS_CUST_MASK' vdb_ids='"Postgres_cust_MASK","AppFS_cust_MASK"'
             """
             sh """
-            /home/delphix/dct-toolkit create_vdb_group name='CMS_CUST_DEV' vdb_ids='["Postgres_cust_DEV","AppFS_cust_DEV"]'
+            /home/delphix/dct-toolkit create_vdb_group name='CMS_CUST_DEV' vdb_ids='"Postgres_cust_DEV","AppFS_cust_DEV"'
             """
             sh """
-            /home/delphix/dct-toolkit create_vdb_group name='CMS_CUST_QA' vdb_ids='["Postgres_cust_QA","AppFS_cust_QA"]'
+            /home/delphix/dct-toolkit create_vdb_group name='CMS_CUST_QA' vdb_ids='"Postgres_cust_QA","AppFS_cust_QA"'
             """
          }
       }
