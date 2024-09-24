@@ -65,11 +65,7 @@ pipeline {
          steps {
             sh """
             /home/delphix/dct-toolkit create_vdb_group name='CMS_MASK' vdb_ids='"Postgres_MASK","AppFS_MASK"'
-            """
-            sh """
             /home/delphix/dct-toolkit create_vdb_group name='CMS_DEV' vdb_ids='"Postgres_DEV","AppFS_DEV"'
-            """
-            sh """
             /home/delphix/dct-toolkit create_vdb_group name='CMS_QA' vdb_ids='"Postgres_QA","AppFS_QA"'
             """
          }
