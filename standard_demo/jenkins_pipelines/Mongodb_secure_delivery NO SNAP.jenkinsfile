@@ -1,12 +1,11 @@
 //
 // Pipeline for Secure Delivery of Mongodb datasource
-// with commented SNAP Prod step 
 //
 // Demo:  Standard Demo
 //
 // 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+// 2023 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
 //
-// TODO:   ADD MASKING STEP
 //
 pipeline {
    agent { label 'devops' }
@@ -21,6 +20,12 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh "/home/delphix/dxtoolkit2/dx_refresh_db  -d democde2 -name 'Mongodb_MASK'"
+         }
+      }
+      stage('Run MASK job') {
+         agent { label 'devops' }
+         steps {
+            sh "cd /home/delphix && ./dxmc job start --engine demomask2 --envname TargetMongoDB --jobname 'MaskMongoDB_MASK'"
          }
       }
       stage('Refresh DEV and QA') {
