@@ -22,13 +22,6 @@ pipeline {
             sh "/home/delphix/dct-toolkit refresh_vdb_by_snapshot vdb_id='Suitecrm_MASK'"
          }
       }
-      stage('Snap MASK') {
-         agent { label 'devops' }
-         steps {
-            sh "/home/delphix/dct-toolkit snapshot_vdb vdb_id='Suitecrm_MASK'"
-         }
-      }
-
       stage('Refresh DEV and QA') {
          agent { label 'devops' }
          steps {
