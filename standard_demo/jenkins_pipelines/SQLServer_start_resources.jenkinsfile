@@ -11,14 +11,9 @@ pipeline {
       stage('enable Sqlserver environments') {
          agent { label 'devops' }
          steps {
-            parallel(
-		Enable_Source_env: {
-			sh "/home/delphix/dct-toolkit enable_environment environment_id='Sqlserver_Source'"
-			},
-		Enable_Target_env: {
-            		sh "/home/delphix/dct-toolkit enable_environment environment_id='Sqlserver_Target'"
-			}
-		)
+		sh "/home/delphix/dct-toolkit enable_environment environment_id='Sqlserver_Target'"
+		sh "/home/delphix/dct-toolkit enable_environment environment_id='Sqlserver_Source'"
+
          }
       }
       stage('enable Sqlserver DSOURCE and VDBs') {
