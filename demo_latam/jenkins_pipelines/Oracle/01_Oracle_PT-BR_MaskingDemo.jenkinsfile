@@ -26,10 +26,10 @@ pipeline {
          steps {
             parallel(
                 Refresh_QA: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle QA' -action refresh"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_QA' -action refresh"
                     },
                 Refresh_DEV: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle DEV' -action refresh"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_DEV' -action refresh"
                 }
             )
          }
