@@ -11,35 +11,42 @@ pipeline {
       stage('enable Sqlserver environments') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dct-toolkit enable_environment environment_id='Sqlserver_Target'"
-            sh "/home/delphix/dct-toolkit enable_environment environment_id='Sqlserver_Source'"
-            sh "exit 0"
+            parallel(
+		Enable_Source_env: {
+			sh "/home/delphix/dct-toolkit enable_environment environment_id='Sqlserver_Source'"
+			},
+		Enable_Target_env: {
+            		sh "/home/delphix/dct-toolkit enable_environment environment_id='Sqlserver_Target'"
+			}
+		)
          }
       }
-      stage('start Sqlserver DSOURCE') {
-         agent { label 'devops' }
-         steps {
-            sh "/home/delphix/dct-toolkit enable_dsource dsource_id='Suitecrm_master'"
-            sh "exit 0"
-         }
-      }
-      stage('start Sqlserver VDBs') {
+      stage('enable Sqlserver DSOURCE and VDBs') {
          agent { label 'devops' }
          steps {
             parallel(
-                Start_MASK: {
+                Enable_MASK: {
                       sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Suitecrm_MASK'"
-                      sh "exit 0"
-                    },
-                Start_QA: {
+                	},
+                Enable_QA: {
                       sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Suitecrm_QA'"
-                      sh "exit 0"
-                    },
-                Start_DEV: {
+                	},
+                Enable_DEV: {
                       sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Suitecrm_DEV'"
-                      sh "exit 0"
-                }
-            )
+                	},
+		Enable_QA_APP: {
+                      sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Suitecrm_app_QA'"
+                	},
+ 		Enable_DEV_APP: {
+                      sh "/home/delphix/dct-toolkit enable_vdb vdb_id='Suitecrm_app_DEV'"
+                	},
+ 		Enable_DSOURCE: {
+                      sh "/home/delphix/dct-toolkit enable_dsource dsource_id='Suitecrm_master'"
+                	},
+		Enable_APP_DSOURCE: {
+                      sh "/home/delphix/dct-toolkit enable_dsource dsource_id='suitecrm_app'"
+                	}
+            	)
          }
       }
    }
