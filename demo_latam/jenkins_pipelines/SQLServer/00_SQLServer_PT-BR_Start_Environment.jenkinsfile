@@ -49,7 +49,7 @@ pipeline {
         agent { label 'devops' }
         steps {
             sh "docker run --rm --env-file ${DIR}/.env.sqlserver.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest migrations_seed.py"
-            sh "docker run --rm --env-file ${DIR}/.env.sqlserver.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest migrations_custom.py"
+            sh "docker run --rm --env-file ${DIR}/.env.sqlserver.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest ⁠migrations_faker.py"
         }
      }
      stage('Snap Production') {
