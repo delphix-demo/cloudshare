@@ -48,8 +48,8 @@ pipeline {
       stage('configure PTBR app on Source DB') {
         agent { label 'devops' }
         steps {
-            sh "docker run --rm --env-file ${DIR}/.env.sqlserver.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest python /usr/src/app/migrations_seed.py"
-            sh "docker run --rm --env-file ${DIR}/.env.sqlserver.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest python /usr/src/app/⁠migrations_faker.py"
+            sh "docker run --rm --env-file ${DIR}/.env.sqlserver.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest /usr/src/app/migrations_seed.py"
+            sh "docker run --rm --env-file ${DIR}/.env.sqlserver.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest /usr/src/app/⁠migrations_faker.py"
         }
      }
      stage('Snap Production') {
