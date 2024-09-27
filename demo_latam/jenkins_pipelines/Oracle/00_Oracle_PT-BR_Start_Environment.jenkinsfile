@@ -34,10 +34,10 @@ pipeline {
                       sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_MASK'"
                     },
                 Start_QA_VDB: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle QA'"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_QA'"
                     },
                 Start_DEV_VDB: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle DEV'"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_DEV'"
                 }
             )
          }
