@@ -39,14 +39,8 @@ pipeline {
       stage('disable Sqlserver environments') {
          agent { label 'devops' }
          steps {
-            parallel(
-		Disable_Source_env: {
-			sh "/home/delphix/dct-toolkit disable_environment environment_id='Sqlserver_Source'"
-			},
-		Disable_Target_env: {
-            		sh "/home/delphix/dct-toolkit disable_environment environment_id='Sqlserver_Target'"
-			}
-		)
+		sh "/home/delphix/dct-toolkit disable_environment environment_id='Sqlserver_Source'"
+            	sh "/home/delphix/dct-toolkit disable_environment environment_id='Sqlserver_Target'"
          }
       }
    }
