@@ -1,5 +1,5 @@
 //
-// Pipeline to destroy DCT environment
+// Pipeline to destroy DCT environment - Oracle
 //
 // Demo:  Standard Demo 2.0
 //
@@ -15,17 +15,12 @@ pipeline {
             parallel(
                 Delete_source: {
                       sh """
-                         /root/dct-toolkit delete_environment environment_id='Postgres Source' 
+                         /root/dct-toolkit delete_environment environment_id='Oracle_source' 
                       """
                 },
                 Delete_staging: {
                       sh """
-                         /root/dct-toolkit delete_environment environment_id='Postgres Staging' 
-                      """
-                },
-                Delete_target: {
-                      sh """
-                         /root/dct-toolkit delete_environment environment_id='Postgres Target' 
+                         /root/dct-toolkit delete_environment environment_id='Oracle_target' 
                       """
                 }
             )
@@ -36,7 +31,6 @@ pipeline {
          steps {
             sh """
                 /root/dct-toolkit unregister_engine engine_id=sourcecde 
-                /root/dct-toolkit unregister_engine engine_id=targetcde 
                 /root/dct-toolkit unregister_engine engine_id=cce 
             """
          }

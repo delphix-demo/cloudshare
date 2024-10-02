@@ -11,11 +11,11 @@ pipeline {
 
    agent { label 'devops' }
    stages {
-      stage('Create source DB tables') {
+      stage('Create drop/create source DB tables scripts') {
          agent { label 'devops' }
          steps {
             sh """
-cat << 'EOF' > drop_tables.txt
+cat << 'EOF' > /tmp/drop_tables.txt
 BEGIN
   EXECUTE IMMEDIATE 'DROP TABLE delphix.patient_visit';
 EXCEPTION
@@ -37,9 +37,7 @@ END;
 QUIT
 /
 EOF
-            """
-            sh """
-cat << 'EOF' > create_tables.txt
+cat << 'EOF' > /tmp/create_tables.txt
 CREATE TABLE delphix.patient( 
    patient_id INT GENERATED ALWAYS AS IDENTITY, 
    first_name VARCHAR(80) NOT NULL, 
@@ -71,26 +69,13 @@ quit;
 /
 EOF
             """
-            sh """
-sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @drop_tables.txt
-sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @create_tables.txt
-            """
          }
       }
-      stage('Generate synthetic data for Source DB') {
+      stage('Create load tables scripts') {
          agent { label 'devops' }
          steps {
             sh """
-               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/916c30d9-767c-405b-9e89-337c110c4d15/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_data.csv 
-               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/377a5669-8e5f-41de-a84e-d8aa4e83c90f/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_visit_data.csv 
-            """
-         }
-      }       
-      stage('Load Source DB data') {
-         agent { label 'devops' }
-         steps {
-            sh """
-cat << 'EOF' > load_patient_visit_data.ctl
+cat << 'EOF' > /tmp/load_patient_visit_data.ctl
 LOAD DATA
 INFILE bm_patient_visit_data.csv
 INTO TABLE delphix.PATIENT_VISIT
@@ -105,7 +90,7 @@ TRAILING NULLCOLS (
 EOF
                """
             sh """
-cat << 'EOF' > load_patient_data.ctl
+cat << 'EOF' > /tmp/load_patient_data.ctl
 LOAD DATA
 INFILE bm_patient_data.csv
 INTO TABLE delphix.PATIENT
@@ -125,11 +110,84 @@ TRAILING NULLCOLS (
 "PHONE" CHAR (15))
 EOF
                """
+         }
+      }
+      stage('Generate synthetic data for Source DB') {
+         agent { label 'devops' }
+         steps {
             sh """
-sqlldr \'sys/delphix@10.160.2.20/orcl as sysdba\' load_patient_visit_data.ctl 
-sqlldr \'sys/delphix@10.160.2.20/orcl as sysdba\' load_patient_data.ctl 
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/916c30d9-767c-405b-9e89-337c110c4d15/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_data.csv 
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/377a5669-8e5f-41de-a84e-d8aa4e83c90f/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_visit_data.csv 
             """
          }
       }
+      stage('Drop/Create Source DB tables ORCL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @/tmp/drop_tables.txt
+sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @/tmp/create_tables.txt
+            """
+         }
+      } 
+      stage('Drop/Create Source DB tables WINTERFELL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlplus sys/delphix@10.160.2.20:1521/WINTERFELL.localdomain as sysdba @/tmp/drop_tables.txt
+sqlplus sys/delphix@10.160.2.20:1521/WINTERFELL.localdomain as sysdba @/tmp/create_tables.txt
+            """
+         }
+      }
+      stage('Load source DB data #1 ORCL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlldr \\\'sys/delphix@10.160.2.20/orcl as sysdba\\\' /tmp/load_patient_data.ctl || true
+            """
+         }
+      }
+      stage('Load source DB data #2 ORCL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlldr \\\'sys/delphix@10.160.2.20/orcl as sysdba\\\' /tmp/load_patient_visit_data.ctl || true
+            """
+         }
+      }
+      stage('Load source DB data #1 WINTERFELL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlldr \\\'sys/delphix@10.160.2.20/WINTERFELL.localdomain as sysdba\\\' /tmp/load_patient_data.ctl || true
+            """
+         }
+      }
+      stage('Load source DB data #2 WINTERFELL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlldr \\\'sys/delphix@10.160.2.20/WINTERFELL.localdomain as sysdba\\\' /tmp/load_patient_visit_data.ctl || true
+            """
+         }
+      }
+      stage('Delete temp files') {
+         agent { label 'devops' }
+         steps {
+            sh """
+rm -f /tmp/drop_tables.txt
+rm -f /tmp/create_tables.txt
+rm -f /tmp/load_patient_visit_data.ctl 
+rm -f /tmp/load_patient_data.ctl
+            """
+         }
+      }
+
    }
 }

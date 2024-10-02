@@ -18,11 +18,6 @@ pipeline {
                          /root/dct-toolkit register_engine hostname=10.160.1.18 name=sourcecde username=admin password=Delphix_123! --insecure_ssl  
                       """
                 },
-                Register_remote_cde: {
-                      sh """
-                         /root/dct-toolkit register_engine hostname=10.160.1.19 name=targetcde username=admin password=Delphix_123! --insecure_ssl 
-                      """
-                },
                 Register_CCE: {
                       sh """
                          /root/dct-toolkit register_engine hostname=10.160.1.160 name=cce masking_username=admin masking_password=Delphix_123! --insecure_ssl 
@@ -42,7 +37,7 @@ pipeline {
                 },
                Register_oracle_target: {
                       sh """
-                         /root/dct-toolkit create_environment engine_id="targetcde" name="Oracle_target" os_name="UNIX" hostname="10.160.2.30" toolkit_path="/home/delphix/toolkit" username="delphix" password="delphix" description="Oracle target VM" 
+                         /root/dct-toolkit create_environment engine_id="sourcecde" name="Oracle_target" os_name="UNIX" hostname="10.160.2.30" toolkit_path="/home/delphix/toolkit" username="delphix" password="delphix" description="Oracle target VM" 
                          """
                 }
             )

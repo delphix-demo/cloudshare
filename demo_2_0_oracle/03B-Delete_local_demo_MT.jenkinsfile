@@ -1,36 +1,37 @@
 //
-// Pipeline to destroy local Demo environment - Oracle
+// Pipeline to destroy local Demo environment  - Oracle Multi-tenant
 //
 // Demo:  Standard Demo 2.0
 //
 // 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
 //
+
 pipeline {
 
    agent { label 'devops' }
    stages {
-      stage('Delete local VDBs') {
+      stage('Delete local VPDBs') {
          agent { label 'devops' }
          steps {
             parallel(
                 Delete_DEV: {
                       sh """
-                         /root/dct-toolkit delete_vdb  vdb_id='orcldev' 
+                         /root/dct-toolkit delete_vdb vdb_id='winterfell_dev' 
                       """
                 },
                 Delete_QA: {
                       sh """
-                         /root/dct-toolkit delete_vdb  vdb_id='orclqa' 
+                         /root/dct-toolkit delete_vdb vdb_id='winterfell_qa' 
                       """
                 }
             )
          }
       }
-      stage('Delete local MASK VDB') {
+      stage('Delete local MASK VPDB') {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit delete_vdb  vdb_id='orclmask'
+               /root/dct-toolkit delete_vdb vdb_id='winterfell_mask'
             """
          }
       }
@@ -38,16 +39,8 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit delete_dsource  dsource_id='orcl_master'
+               /root/dct-toolkit delete_dsource  dsource_id='winterfell_master'
                sleep 20 
-            """
-         }
-      }
-      stage('Delete source') {
-         agent { label 'devops' }
-         steps {
-            sh """
-               /root/dct-toolkit delete_source  source_id='Postgres_master'
             """
          }
       }

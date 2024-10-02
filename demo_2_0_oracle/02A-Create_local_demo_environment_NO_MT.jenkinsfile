@@ -1,0 +1,100 @@
+//
+// Pipeline to create local Demo environment - Oracle no Multi-tenant
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Link Dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit link_oracle_database source_id='orcl' name='orcl_master' group_id='Source' environment_user_id='delphix' --link_now
+               sleep 150
+            """
+         }
+      }
+      stage('Create local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='orcl_master' name='orcl_mask' database_name='orclmask' unique_name='orclmask' oracle_instance_name='orclmask' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision' 
+            """
+         }
+      }
+      stage('Run Masking job - da fare') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                sleep 120
+            """
+         }
+      }   
+      stage('Snap local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit snapshot_vdb vdb_id='orcl_mask'                       
+            """
+         }
+      }   
+      stage('Show masked rows MASK') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlplus delphix/delphix@10.160.2.30:1521/orclmask << EOF
+SELECT count(*) FROM delphix.PATIENT;
+SELECT count(*) FROM delphix.PATIENT_VISIT;
+EOF
+            """
+         }
+      }
+      stage('Create local DEV and QA VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_DEV_VDB: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='orcl_mask' name='orcl_dev' database_name='orcldev' unique_name='orcldev' oracle_instance_name='orcldev' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision' 
+                      """
+                },
+                Create_QA_VDB: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='orcl_mask' name='orcl_qa' database_name='orclqa' unique_name='orclqa' oracle_instance_name='orclqa' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Show DEV rows') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlplus delphix/delphix@10.160.2.30:1521/orcldev << EOF
+SELECT count(*) FROM delphix.PATIENT;
+SELECT count(*) FROM delphix.PATIENT_VISIT;
+EOF
+            """
+         }
+      }   
+      stage('Show QA rows') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlplus delphix/delphix@10.160.2.30:1521/orclqa << EOF
+SELECT count(*) FROM delphix.PATIENT;
+SELECT count(*) FROM delphix.PATIENT_VISIT;
+EOF
+            """
+         }
+      }   
+   }
+}
