@@ -23,10 +23,10 @@ pipeline {
                       sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Oracle_MASK'"
                     },
                 Stop_QA: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle QA' -action disable"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Oracle_QA'"
                     },
                 Stop_DEV: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle DEV' -action disable"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Oracle_DEV'"
                 }
             )
          }

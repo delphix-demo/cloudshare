@@ -26,18 +26,21 @@ pipeline {
             sh "exit 0"
          }
       }
-      stage('start Oracle VDBs') {
+      stage('start Mask Oracle VDB') {
+         agent { label 'devops' }
+         steps {
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_MASK'"
+         }
+      }
+      stage('start DEV & QA VDBs') {
          agent { label 'devops' }
          steps {
             parallel(
-                Start_MASK_VDB: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_MASK'"
-                    },
                 Start_QA_VDB: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle QA' -action enable"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_QA'"
                     },
                 Start_DEV_VDB: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Oracle DEV' -action enable"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Oracle_DEV'"
                 }
             )
          }
@@ -47,18 +50,6 @@ pipeline {
          steps {
              sh "docker run --rm --env-file ${DIR}/.env.orasrc -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-oracle:latest migrations_seed.py"
              sh "docker run --rm --env-file ${DIR}/.env.orasrc -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-oracle:latest migrations_custom.py"
-         }
-      }
-      stage('Snap Production') {
-         agent { label 'devops' }
-         steps {
-            sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'Oracle_master'"
-         }
-      }
-      stage('Refresh MASK') {
-         agent { label 'devops' }
-         steps {
-            sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'Oracle_MASK'"
          }
       }
       stage('start PT_BR App') {
