@@ -23,7 +23,7 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               /dct-toolkit provision_vdb_by_snapshot oracle source_data_id='winterfell_master' name='winterfell_mask' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='MaskGC' vcdb_name='vcdbmask' vcdb_database_name='vcdbmask' oracle_instance_name='winfmask' mount_point='/mnt/provision'                
+               /root/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='winterfell_master' name='winterfell_mask' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='MaskGC' vcdb_name='vcdbmask' vcdb_database_name='vcdbmask' oracle_instance_name='winfmask' mount_point='/mnt/provision'                
             """
          }
       }
@@ -61,12 +61,12 @@ EOF
             parallel(
                 Create_DEV_VDB: {
                       sh """
-                         /dct-toolkit provision_vdb_by_snapshot oracle source_data_id='winterfell_mask' name='winterfell_dev' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='DEV' vcdb_name='vcdbdev' vcdb_database_name='vcdbdev' oracle_instance_name='winfdev' mount_point='/mnt/provision'               
+                         /root/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='winterfell_mask' name='winterfell_dev' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='DEV' vcdb_name='vcdbdev' vcdb_database_name='vcdbdev' oracle_instance_name='winfdev' mount_point='/mnt/provision'               
                       """
                 },
                 Create_QA_VDB: {
                       sh """
-                         /dct-toolkit provision_vdb_by_snapshot oracle source_data_id='winterfell_mask' name='winterfell_qa' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='QA' vcdb_name='vcdbqa' vcdb_database_name='vcdbqa' oracle_instance_name='winfqa' mount_point='/mnt/provision'
+                         /root/dct-toolkit provision_vdb_by_snapshot oracle source_data_id='winterfell_mask' name='winterfell_qa' environment_id='Oracle_target' os_username='delphix' --auto_select_repository target_group_id='QA' vcdb_name='vcdbqa' vcdb_database_name='vcdbqa' oracle_instance_name='winfqa' mount_point='/mnt/provision'
                       """
                 }
             )
