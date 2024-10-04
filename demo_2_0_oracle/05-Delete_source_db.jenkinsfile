@@ -1,0 +1,62 @@
+//
+// Pipeline to prepare Source DB for Demo - Oracle ORCL e WINTERFELL
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create drop/create source DB tables scripts') {
+         agent { label 'devops' }
+         steps {
+            sh """
+cat << 'EOF' > /tmp/drop_tables.txt
+BEGIN
+  EXECUTE IMMEDIATE 'DROP TABLE delphix.patient_visit';
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL;
+END;
+/
+
+BEGIN   
+   EXECUTE IMMEDIATE 'DROP TABLE delphix.patient';
+EXCEPTION   
+   WHEN OTHERS THEN      
+     IF SQLCODE != -942 THEN
+        RAISE;  
+     END IF;
+END;
+/
+
+QUIT
+/
+EOF
+         """
+         }
+      }
+      stage('Drop Source DB tables ORCL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @/tmp/drop_tables.txt
+            """
+         }
+      } 
+      stage('Drop Source DB tables WINTERFELL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlplus sys/delphix@10.160.2.20:1521/WINTERFELL.localdomain as sysdba @/tmp/drop_tables.txt
+            """
+         }
+      }
+   }
+}
