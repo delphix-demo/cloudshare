@@ -1,0 +1,25 @@
+//
+// Pipeline to Delete Source DB for Demo
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create source DB tables') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb <<EOF 
+DROP TABLE IF EXISTS patient, patient_visit CASCADE; 
+EOF
+"""
+         }
+      }
+   }
+}
