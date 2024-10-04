@@ -1,5 +1,5 @@
 //
-// Pipeline to prepare Source DB for Demo - Oracle ORCL e WINTERFELL
+// Pipeline to prepare Source DB for Demo - Oracle Multi-tenant
 //
 // Demo:  Standard Demo 2.0
 //
@@ -121,16 +121,6 @@ EOF
             """
          }
       }
-      stage('Drop/Create Source DB tables ORCL') {
-         agent { label 'devops' }
-         steps {
-            sh """
-source ~/.bashrc
-sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @/tmp/drop_tables.txt
-sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @/tmp/create_tables.txt
-            """
-         }
-      } 
       stage('Drop/Create Source DB tables WINTERFELL') {
          agent { label 'devops' }
          steps {
@@ -138,24 +128,6 @@ sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @/tmp/create_tables.txt
 source ~/.bashrc
 sqlplus sys/delphix@10.160.2.20:1521/WINTERFELL.localdomain as sysdba @/tmp/drop_tables.txt
 sqlplus sys/delphix@10.160.2.20:1521/WINTERFELL.localdomain as sysdba @/tmp/create_tables.txt
-            """
-         }
-      }
-      stage('Load source DB data #1 ORCL') {
-         agent { label 'devops' }
-         steps {
-            sh """
-source ~/.bashrc
-sqlldr \\\'sys/delphix@10.160.2.20/orcl as sysdba\\\' /tmp/load_patient_data.ctl || true
-            """
-         }
-      }
-      stage('Load source DB data #2 ORCL') {
-         agent { label 'devops' }
-         steps {
-            sh """
-source ~/.bashrc
-sqlldr \\\'sys/delphix@10.160.2.20/orcl as sysdba\\\' /tmp/load_patient_visit_data.ctl || true
             """
          }
       }

@@ -1,5 +1,5 @@
 //
-// Pipeline to destroy local Demo environment  - Oracle no Multi-tenant
+// Pipeline to destroy local Demo environment  - Oracle single instance
 //
 // Demo:  Standard Demo 2.0
 //

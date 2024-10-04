@@ -1,5 +1,5 @@
 //
-// Pipeline to prepare Source DB for Demo - Oracle ORCL e WINTERFELL
+// Pipeline to prepare Source DB for Demo - Oracle Multi-tenant
 //
 // Demo:  Standard Demo 2.0
 //
@@ -40,15 +40,6 @@ EOF
          """
          }
       }
-      stage('Drop Source DB tables ORCL') {
-         agent { label 'devops' }
-         steps {
-            sh """
-source ~/.bashrc
-sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @/tmp/drop_tables.txt
-            """
-         }
-      } 
       stage('Drop Source DB tables WINTERFELL') {
          agent { label 'devops' }
          steps {

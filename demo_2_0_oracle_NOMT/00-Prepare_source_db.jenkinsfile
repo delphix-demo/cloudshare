@@ -1,0 +1,165 @@
+//
+// Pipeline to prepare Source DB for Demo - Oracle single instance
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create drop/create source DB tables scripts') {
+         agent { label 'devops' }
+         steps {
+            sh """
+cat << 'EOF' > /tmp/drop_tables.txt
+BEGIN
+  EXECUTE IMMEDIATE 'DROP TABLE delphix.patient_visit';
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL;
+END;
+/
+
+BEGIN   
+   EXECUTE IMMEDIATE 'DROP TABLE delphix.patient';
+EXCEPTION   
+   WHEN OTHERS THEN      
+     IF SQLCODE != -942 THEN
+        RAISE;  
+     END IF;
+END;
+/
+
+QUIT
+/
+EOF
+cat << 'EOF' > /tmp/create_tables.txt
+CREATE TABLE delphix.patient( 
+   patient_id INT GENERATED ALWAYS AS IDENTITY, 
+   first_name VARCHAR(80) NOT NULL, 
+   last_name VARCHAR(80) NOT NULL, 
+   dob DATE NOT NULL, 
+   ssn VARCHAR(20) NOT NULL, 
+   marital_status VARCHAR(20) NOT null, 
+   address VARCHAR(255) NOT NULL, 
+   city VARCHAR(255) NOT NULL, 
+   state VARCHAR(50) NOT NULL, 
+   zipcode VARCHAR(5) NOT NULL, 
+   mail VARCHAR(200) NOT NULL, 
+   PHONE VARCHAR(15) NOT null, 
+   PRIMARY KEY(patient_id) 
+); 
+
+CREATE TABLE delphix.patient_visit( 
+   patient_visit_id INT GENERATED ALWAYS AS IDENTITY, 
+   patient_id INT NOT NULL, 
+   visit_date DATE NOT NULL, 
+   copay numeric NOT NULL, 
+   primary_reason VARCHAR(500) NOT NULL, 
+   notes VARCHAR(500) NOT NULL, 
+   CONSTRAINT FK_patient_visit FOREIGN KEY(patient_id) 
+        REFERENCES delphix.patient(patient_id) 
+);
+
+quit;
+/
+EOF
+            """
+         }
+      }
+      stage('Create load tables scripts') {
+         agent { label 'devops' }
+         steps {
+            sh """
+cat << 'EOF' > /tmp/load_patient_visit_data.ctl
+LOAD DATA
+INFILE bm_patient_visit_data.csv
+INTO TABLE delphix.PATIENT_VISIT
+FIELDS TERMINATED BY','
+OPTIONALLY ENCLOSED BY '"' AND '"'
+TRAILING NULLCOLS (
+"PATIENT_ID",
+"VISIT_DATE" TIMESTAMP "YYYY-MM-DD-HH24.MI.SS.FF",
+"COPAY",
+"PRIMARY_REASON" CHAR(500),
+"NOTES" CHAR(500))
+EOF
+               """
+            sh """
+cat << 'EOF' > /tmp/load_patient_data.ctl
+LOAD DATA
+INFILE bm_patient_data.csv
+INTO TABLE delphix.PATIENT
+FIELDS TERMINATED BY','
+OPTIONALLY ENCLOSED BY '"' AND '"'
+TRAILING NULLCOLS (
+"ADDRESS" CHAR (255),
+"FIRST_NAME" CHAR (80),
+"LAST_NAME" CHAR (80),
+"DOB" DATE "YYYY-MM-DD" ,
+"SSN" CHAR (20),
+"MARITAL_STATUS" CHAR (20),
+"CITY" CHAR (255),
+"STATE" CHAR (50),
+"MAIL" CHAR (200),
+"ZIPCODE" CHAR(7),
+"PHONE" CHAR (15))
+EOF
+               """
+         }
+      }
+      stage('Generate synthetic data for Source DB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/916c30d9-767c-405b-9e89-337c110c4d15/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_data.csv 
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/377a5669-8e5f-41de-a84e-d8aa4e83c90f/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_visit_data.csv 
+            """
+         }
+      }
+      stage('Drop/Create Source DB tables ORCL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @/tmp/drop_tables.txt
+sqlplus sys/delphix@10.160.2.20:1521/orcl as sysdba @/tmp/create_tables.txt
+            """
+         }
+      } 
+      stage('Load source DB data #1 ORCL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlldr \\\'sys/delphix@10.160.2.20/orcl as sysdba\\\' /tmp/load_patient_data.ctl || true
+            """
+         }
+      }
+      stage('Load source DB data #2 ORCL') {
+         agent { label 'devops' }
+         steps {
+            sh """
+source ~/.bashrc
+sqlldr \\\'sys/delphix@10.160.2.20/orcl as sysdba\\\' /tmp/load_patient_visit_data.ctl || true
+            """
+         }
+      }
+      stage('Delete temp files') {
+         agent { label 'devops' }
+         steps {
+            sh """
+rm -f /tmp/drop_tables.txt
+rm -f /tmp/create_tables.txt
+rm -f /tmp/load_patient_visit_data.ctl 
+rm -f /tmp/load_patient_data.ctl
+            """
+         }
+      }
+
+   }
+}

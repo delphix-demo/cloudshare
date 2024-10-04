@@ -1,11 +1,10 @@
 //
-// Pipeline to Refresh Demo environment, showing Data Secure Delivery - Oracle no Multi-tenant
+// Pipeline to Refresh Demo environment, showing Data Secure Delivery - Oracle Multi-tenant
 //
 // Demo:  Standard Demo 2.0
 //
 // 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
 //
-
 
 pipeline {
 
