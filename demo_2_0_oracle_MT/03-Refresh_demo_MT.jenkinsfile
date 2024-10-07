@@ -22,9 +22,9 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-                export vdb_name="\$(/root/dct-toolkit search_vdbs name='winterfell_mask' --no-is_replica -js -jp 'items[0].id')"
-                /root/dct-toolkit refresh_vdb_by_snapshot vdb_id=\${vdb_name}                
-            """
+               export vdb_name="\$(/root/dct-toolkit search_vdbs name='winterfell_mask' --no-is_replica -js -jp 'items[0].id')"
+               /root/dct-toolkit refresh_vdb_by_snapshot vdb_id=\${vdb_name}                
+               """
          }
       }   
       stage('Run Masking job - TO DO') {
@@ -38,12 +38,12 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-                export vdb_name="\$(/root/dct-toolkit search_vdbs name='winterfell_mask' --no-is_replica -js -jp 'items[0].id')"
+               export vdb_name="\$(/root/dct-toolkit search_vdbs name='winterfell_mask' --no-is_replica -js -jp 'items[0].id')"
                /root/dct-toolkit snapshot_vdb vdb_id=\${vdb_name}
                """
          }
       }  
-      stage('Refresh QA VDB with latest data') {
+      stage('Refresh QA VPDB with latest data') {
          agent { label 'devops' }
          steps {
             parallel(
@@ -55,7 +55,7 @@ pipeline {
                 Refresh_QA_VPDB: {
                       sh """
                          /root/dct-toolkit refresh_vdb_by_snapshot vdb_id='winterfell_qa'
-                      """
+                         """
                 }
             )
          }
