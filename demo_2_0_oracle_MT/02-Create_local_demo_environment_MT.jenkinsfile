@@ -27,7 +27,7 @@ pipeline {
             """
          }
       }
-      stage('Run Masking job - da fare') {
+      stage('Run Masking job - TO DO') {
          agent { label 'devops' }
          steps {
             sh """
@@ -48,7 +48,7 @@ pipeline {
          steps {
             sh """
 source ~/.bashrc
-sqlplus delphix/delphix@10.160.2.30:1521/winfmask << EOF
+sqlplus delphix/delphix@10.160.2.30:1521/winterfell_mask << EOF
 SELECT count(*) FROM delphix.PATIENT;
 SELECT count(*) FROM delphix.PATIENT_VISIT;
 EOF
@@ -77,7 +77,7 @@ EOF
          steps {
             sh """
 source ~/.bashrc
-sqlplus delphix/delphix@10.160.2.30:1521/winfdev << EOF
+sqlplus delphix/delphix@10.160.2.30:1521/winterfell_dev << EOF
 SELECT count(*) FROM delphix.PATIENT;
 SELECT count(*) FROM delphix.PATIENT_VISIT;
 EOF
@@ -89,7 +89,7 @@ EOF
          steps {
             sh """
 source ~/.bashrc
-sqlplus delphix/delphix@10.160.2.30:1521/winfqa << EOF
+sqlplus delphix/delphix@10.160.2.30:1521/winterfell_qa << EOF
 SELECT count(*) FROM delphix.PATIENT;
 SELECT count(*) FROM delphix.PATIENT_VISIT;
 EOF

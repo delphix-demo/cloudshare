@@ -10,62 +10,35 @@ pipeline {
 
    agent { label 'devops' }
    stages {
-      stage('Generate new synthetic data for Source') {
-         agent { label 'devops' }
-         steps {
-            sh """
-               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/8168141e-3d8c-4664-a393-52256ba5b900/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_data_2nd_run.csv 
-               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/19a3fd42-29d0-4e02-9b9d-69305e754e0f/generatefile' -X POST -u b7304960ca8e1f0f816133d6:dd63534b4cc1f88fea9bee7b517e0ee79a0020be29ab13ae8e569655d3aed55b01e71b30 -H 'accept: text/csv' > bm_patient_visit_data_2nd_run.csv 
-            """
-         }
-      }   
-      stage('Add new synthetic data to Source') {
-         agent { label 'devops' }
-         steps {
-            sh """
-               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "COPY patient(address,first_name,last_name,dob,ssn,marital_status,city,state,mail,zipcode,phone) FROM '/var/lib/pgsql/bm_patient_data_2nd_run.csv' DELIMITER ',' CSV HEADER;" 
-               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "COPY patient_visit(patient_id,visit_date,copay,primary_reason,notes) FROM '/var/lib/pgsql/bm_patient_visit_data_2nd_run.csv' DELIMITER ',' CSV HEADER;" 
-               """
-         }
-      } 
-      stage('Show number of loaded rows') {
-         agent { label 'devops' }
-         steps {
-            sh """
-               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "select 'Patient' as Table, count(*) as rows from public.patient union all select 'Patient_visit', count(*) from public.patient_visit;" 
-               """
-         }
-      }   
       stage('Snap Source') {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit snapshot_dsource dsource_id='Postgres_master' 
+               /root/dct-toolkit snapshot_dsource dsource_id='winterfell_master' 
                """
          }
       }   
-      stage('Refresh MASK from latest snapshot') {
+      stage('Refresh MASK VPDB from latest snapshot') {
          agent { label 'devops' }
          steps {
             sh """
-                export vdb_name="\$(/root/dct-toolkit search_vdbs name='Postgres_MASK' --no-is_replica -js -jp 'items[0].id')"
+                export vdb_name="\$(/root/dct-toolkit search_vdbs name='winterfell_mask' --no-is_replica -js -jp 'items[0].id')"
                 /root/dct-toolkit refresh_vdb_by_snapshot vdb_id=\${vdb_name}                
             """
          }
       }   
-      stage('Run Masking job on MASK') {
+      stage('Run Masking job - TO DO') {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Masking_patients' 
                """
          }
       }  
-      stage('Snap local MASK VDB') {
+      stage('Snap local MASK VPDB') {
          agent { label 'devops' }
          steps {
             sh """
-                export vdb_name="\$(/root/dct-toolkit search_vdbs name='Postgres_MASK' --no-is_replica -js -jp 'items[0].id')"
+                export vdb_name="\$(/root/dct-toolkit search_vdbs name='winterfell_mask' --no-is_replica -js -jp 'items[0].id')"
                /root/dct-toolkit snapshot_vdb vdb_id=\${vdb_name}
                """
          }
@@ -73,19 +46,19 @@ pipeline {
       stage('Refresh QA VDB with latest data') {
          agent { label 'devops' }
          steps {
-            sh """
-               /root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Postgres_QA'  
-               """
+            parallel(
+                Refresh_DEV_VPDB: {
+                      sh """
+                         /root/dct-toolkit refresh_vdb_by_snapshot vdb_id='winterfell_dev'
+                         """
+                },
+                Refresh_QA_VPDB: {
+                      sh """
+                         /root/dct-toolkit refresh_vdb_by_snapshot vdb_id='winterfell_qa'
+                      """
+                }
+            )
          }
-      }  
-      stage('Show row count DEV vs QA') {
-         agent { label 'devops' }
-         steps {
-            sh """
-               psql -p 6432 -h 10.160.1.74 -U postgres -d delphixdb -c "select 'Patient' as Table, count(*) as Rows from public.patient union all select 'Patient_visit' as Table, count(*) as Rows from public.patient_visit;"  
-               psql -p 7432 -h 10.160.1.74 -U postgres -d delphixdb -c "select 'Patient' as Table, count(*) as rows from public.patient union all select 'Patient_visit' as Table, count(*) as Rows from public.patient_visit;" 
-               """
-         }
-      }  
+      }   
    }
 }

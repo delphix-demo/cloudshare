@@ -27,7 +27,7 @@ pipeline {
             """
          }
       }
-      stage('Run Masking job - da fare') {
+      stage('Run Masking job - TO DO') {
          agent { label 'devops' }
          steps {
             sh """
