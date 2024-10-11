@@ -15,8 +15,8 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/8168141e-3d8c-4664-a393-52256ba5b900/generatefile' -X POST -u b7304960ca8e1f0f816133d6:a8965ce1001c60924b1a98eb9cbb679aad9b13f23927329b0978536dfa51cddaeab462fe -H 'accept: text/csv' > bm_patient_data_2nd_run.csv 
-               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/19a3fd42-29d0-4e02-9b9d-69305e754e0f/generatefile' -X POST -u b7304960ca8e1f0f816133d6:a8965ce1001c60924b1a98eb9cbb679aad9b13f23927329b0978536dfa51cddaeab462fe -H 'accept: text/csv' > bm_patient_visit_data_2nd_run.csv 
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/8168141e-3d8c-4664-a393-52256ba5b900/generatefile' -X POST -u b7304960ca8e1f0f816133d6:c7fc9af8ac13a55d020d32fb11392856d1ab92df5be6343590a684499b5db82ce3a92660 -H 'accept: text/csv' > bm_patient_data_2nd_run.csv 
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/19a3fd42-29d0-4e02-9b9d-69305e754e0f/generatefile' -X POST -u b7304960ca8e1f0f816133d6:c7fc9af8ac13a55d020d32fb11392856d1ab92df5be6343590a684499b5db82ce3a92660 -H 'accept: text/csv' > bm_patient_visit_data_2nd_run.csv 
             """
          }
       }   
