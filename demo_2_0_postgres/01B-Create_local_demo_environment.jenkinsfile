@@ -8,6 +8,9 @@
 pipeline {
 
    agent { label 'devops' }
+   environment {
+      BMID = credentials('Blazemeter-ID')
+   }
    stages {
       stage('Create Postgres Source') {
          agent { label 'devops' }
@@ -87,8 +90,8 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/fb256a81-9834-4262-8d19-c770f6518953/generatefile' -X POST -u b7304960ca8e1f0f816133d6:c7fc9af8ac13a55d020d32fb11392856d1ab92df5be6343590a684499b5db82ce3a92660 -H 'accept: text/csv' > bm_patient_data_DEV.csv 
-               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/2f8009cf-a3d3-4a42-a942-9c512c145897/generatefile' -X POST -u b7304960ca8e1f0f816133d6:c7fc9af8ac13a55d020d32fb11392856d1ab92df5be6343590a684499b5db82ce3a92660 -H 'accept: text/csv' > bm_patient_visit_data_DEV.csv                
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/fb256a81-9834-4262-8d19-c770f6518953/generatefile' -X POST -u $BMID -H 'accept: text/csv' > bm_patient_data_DEV.csv 
+               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/2f8009cf-a3d3-4a42-a942-9c512c145897/generatefile' -X POST -u $BMID -H 'accept: text/csv' > bm_patient_visit_data_DEV.csv                
             """
          }
       }   
