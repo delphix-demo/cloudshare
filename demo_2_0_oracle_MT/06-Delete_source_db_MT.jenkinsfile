@@ -11,7 +11,7 @@ pipeline {
 
    agent { label 'devops' }
    stages {
-      stage('Create drop/create source DB tables scripts') {
+      stage('Create drop source DB tables scripts') {
          agent { label 'devops' }
          steps {
             sh """
