@@ -6,6 +6,7 @@
 // 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
 //
 //
+
 pipeline {
    agent { label 'devops' }
    stages {
@@ -31,17 +32,12 @@ pipeline {
             )
           }
       }
-      stage('Refresh MASK') {
+      stage('Refresh VDBgroup CMS_MASK') {
          agent { label 'devops' }
          steps {
-            parallel(
-                Refresh_Postgres: {
-                      sh "/home/delphix/dct-toolkit refresh_vdb_by_snapshot vdb_id='Postgres_MASK'"
-                    },
-                Refresh_FS: {
-                      sh "/home/delphix/dct-toolkit refresh_vdb_by_snapshot vdb_id='AppFS_MASK'"
-                }
-            )
+            sh """
+            /home/delphix/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='CMS_MASK'
+            """
          }
       }
       stage('Run MASK job') {
@@ -52,24 +48,24 @@ pipeline {
             sh "/home/delphix/mask_read_mask.sh"
          }
       }
-      stage('Bookmark MASK') {
+      stage('Bookmark VDBgroup CMS_MASK') {
          agent { label 'devops' }
          steps {
             sh """
-               /home/delphix/dct-toolkit create_bookmark vdb_ids="Postgres_MASK,AppFS_MASK" name='CMS_MASK_after_masking'
+               /home/delphix/dct-toolkit create_bookmark vdb_group_id='CMS_MASK' name='CMS_MASK_after_masking'
             """
          }
       }
-      stage('Refresh DEV and QA from a Bookmark') {
+      stage('Refresh VDBgroups CMS_DEV and CMS_QA from a Bookmark') {
          agent { label 'devops' }
          steps {
             parallel(
-                Refresh_QA: {
+                Refresh_CMS_QA: {
                       sh """
                          /home/delphix/dct-toolkit refresh_vdb_group vdb_group_id='CMS_QA' bookmark_id='CMS_MASK_after_masking'
                       """
                     },
-                Refresh_DEV: {
+                Refresh_CMS_DEV: {
                       sh """
                          /home/delphix/dct-toolkit refresh_vdb_group vdb_group_id='CMS_DEV' bookmark_id='CMS_MASK_after_masking'
                       """
