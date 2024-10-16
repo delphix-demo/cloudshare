@@ -40,7 +40,6 @@ pipeline {
          steps {
             sh """
                /root/dct-toolkit delete_dsource  dsource_id='orcl_master'
-               sleep 20 
             """
          }
       }

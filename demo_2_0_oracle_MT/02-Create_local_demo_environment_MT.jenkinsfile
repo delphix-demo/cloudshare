@@ -15,7 +15,6 @@ pipeline {
          steps {
             sh """
                /root/dct-toolkit link_oracle_database source_id='WINTERFELL' name='winterfell_master' group_id='Source' environment_user_id='delphix' --link_now
-               sleep 150
             """
          }
       }
@@ -31,7 +30,7 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-                sleep 30
+                sleep 10
             """
          }
       }   

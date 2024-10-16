@@ -40,7 +40,6 @@ pipeline {
          steps {
             sh """
                /root/dct-toolkit delete_dsource  dsource_id='winterfell_master'
-               sleep 20 
             """
          }
       }
