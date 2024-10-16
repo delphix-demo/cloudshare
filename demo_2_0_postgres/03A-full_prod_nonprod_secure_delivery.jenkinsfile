@@ -79,7 +79,6 @@ pipeline {
          steps {
             sh """
                /root/dct-toolkit execute_replication_profile replication_profile_id='Prod-noprod' 
-               sleep 30
                """
          }
       } 
