@@ -1,24 +1,26 @@
 //
-// Pipeline to start DB2 Resources
+// Pipeline to start DB2 Resources - DCT version
 //
 // Demo:  Standard Demo
 //
-// 2023 (c) Delphix - DB2 Pipelines 
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
 //
+
 pipeline {
    agent { label 'devops' }
    stages {
       stage('enable DB2 environments') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde6 -name 'DB2_Source' -action enable"
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde6 -name 'DB2_Target' -action enable"
+            sh "/root/dct-toolkit enable_environment environment_id='DB2_Target'"
+            sh "/root/dct-toolkit enable_environment environment_id='DB2_Source'"
+            sh "exit 0"
          }
       }
-      stage('start DB2 dSource') {
+      stage('start DB2 DSOURCE') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action enable -name 'db2_master'"
+            sh "/root/dct-toolkit enable_dsource dsource_id='db2_master'"
             sh "exit 0"
          }
       }
@@ -27,13 +29,16 @@ pipeline {
          steps {
             parallel(
                 Start_MASK: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action enable -name 'DB2_MASK'"
+                      sh "/root/dct-toolkit enable_vdb vdb_id='DB2_MASK'"
+                      sh "exit 0"
                     },
                 Start_QA: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action enable -name 'DB2_QA'"
+                      sh "/root/dct-toolkit enable_vdb vdb_id='DB2_QA'"
+                      sh "exit 0"
                     },
                 Start_DEV: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action enable -name 'DB2_DEV'"
+                      sh "/root/dct-toolkit enable_vdb vdb_id='DB2_DEV'"
+                      sh "exit 0"
                 }
             )
          }

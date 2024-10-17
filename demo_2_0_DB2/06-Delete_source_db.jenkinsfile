@@ -1,0 +1,23 @@
+//
+// Pipeline to prepare Source DB for Demo - DB2
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Delete source DB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+              exit 0
+            """
+         }
+      }
+   }
+}

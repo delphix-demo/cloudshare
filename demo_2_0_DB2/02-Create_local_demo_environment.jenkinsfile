@@ -1,0 +1,65 @@
+//
+// Pipeline to create local Demo environment - DB2
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+DA FARE ******
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Link Dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit link_DB2_database source_id='DB2' name='DB2_master' group_id='Source' environment_user_id='delphix' --link_now
+            """
+         }
+      }
+      stage('Create local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot DB2 source_data_id='db2_master' name='DB2_MASK' database_name='DB2mask' environment_id='DB2_target' os_username='db2inst1' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision' 
+            """
+         }
+      }
+      stage('Run Masking job - TO DO') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                sleep 10
+            """
+         }
+      }   
+      stage('Snap local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit snapshot_vdb vdb_id='DB2_MASK'                       
+            """
+         }
+      }   
+      stage('Create local DEV and QA VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_DEV_VDB: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot DB2 source_data_id='DB2_MASK' name='DB2_DEV' database_name='DB2DEV' environment_id='DB2_target' os_username='db2inst1' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision' 
+                      """
+                },
+                Create_QA_VDB: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot DB2 source_data_id='DB2_MASK' name='DB2_QA' database_name='DB2QA' environment_id='DB2_target' os_username='db2inst1' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision' 
+                      """
+                }
+            )
+         }
+      }
+   }
+}

@@ -1,17 +1,18 @@
 //
-// Pipeline to stop DB2 Resources
+// Pipeline to stop DB2 Resources - DCT Version
 //
 // Demo:  Standard Demo
 //
-// 2023 (c) Delphix 
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
 //
+
 pipeline {
    agent { label 'devops' }
    stages {
-      stage('stop DB2 dSource') {
+      stage('stop DB2 DSOURCE') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action disable -name 'db2_master'"
+            sh "/root/dct-toolkit disable_dsource dsource_id='db2_master'"
             sh "exit 0"
          }
       }
@@ -20,22 +21,22 @@ pipeline {
          steps {
             parallel(
                 Stop_MASK: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action disable -name 'DB2_MASK'"
+                      sh "/root/dct-toolkit disable_vdb vdb_id='DB2_MASK'"
                     },
                 Stop_QA: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action disable -name 'DB2_QA'"
+                      sh "/root/dct-toolkit disable_vdb vdb_id='DB2_QA'"
                     },
                 Stop_DEV: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde6 -action disable -name 'DB2_DEV'"
+                      sh "/root/dct-toolkit disable_vdb vdb_id='DB2_DEV'"
                 }
             )
          }
       }
-      stage('disable DB2 environments') {
+      stage('Disable DB2 environments') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde6 -name 'DB2_Source' -action disable"
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde6 -name 'DB2_Target' -action disable"
+            sh "/root/dct-toolkit disable_environment environment_id='DB2_Target'"
+            sh "/root/dct-toolkit disable_environment environment_id='DB2_Source'"
          }
       }
    }
