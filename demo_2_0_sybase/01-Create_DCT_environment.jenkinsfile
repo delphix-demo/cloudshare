@@ -1,0 +1,50 @@
+//
+// Pipeline to Create DCT environment - Sybase
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+TO DO
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Register demo engines into DCT') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Register_cde: {
+                      sh """
+                         /root/dct-toolkit register_engine hostname=10.160.1.6 name=cde2 username=admin password=Delphix_123! --insecure_ssl  
+                      """
+                },
+                Register_cce: {
+                      sh """
+                         /root/dct-toolkit register_engine hostname=10.160.1.161 name=cce2 masking_username=admin masking_password=Delphix_123! --insecure_ssl 
+                      """
+                }
+            )
+         }
+      }
+      stage('Register local and remote environments') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Register_DB2_source: {
+                      sh """
+                         /root/dct-toolkit create_environment engine_id="cde2" name="Sybase_source" os_name="UNIX" hostname="10.160.1.63" toolkit_path="/toolkit" username="db2inst1" password="Delphix_123!" description="DB2 source VM" 
+                         """
+                },
+               Register_DB2_target: {
+                      sh """
+                         /root/dct-toolkit create_environment engine_id="cde2" name="Sybase_target" os_name="UNIX" hostname="10.160.1.23" toolkit_path="/toolkit" username="db2inst1" password="Delphix_123!" description="DB2 target VM" 
+                         """
+                }
+            )
+         }
+      }
+   }
+}

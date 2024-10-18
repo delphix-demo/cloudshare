@@ -1,39 +1,44 @@
 //
-// Pipeline to start Ase Resources
+// Pipeline to start Sybase Resources - DCT version
 //
 // Demo:  Standard Demo
 //
-// 2022 (c) Delphix - Ruben Catarrunas (ruben.catarrunas@delphix.com)
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
 //
+
 pipeline {
    agent { label 'devops' }
    stages {
-      stage('enable Ase environments') {
+      stage('enable Sybase environments') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Ase_Target' -action enable"
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Ase_Source' -action enable"
-         }
-      }
-      stage('start Ase DSOURCE') {
-         agent { label 'devops' }
-         steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action enable -name 'Ase_1_master'"
+            sh "/root/dct-toolkit enable_environment environment_id='Ase_Target'"
+            sh "/root/dct-toolkit enable_environment environment_id='Ase_Source'"
             sh "exit 0"
          }
       }
-      stage('start Ase VDBs') {
+      stage('start Sybase DSOURCE') {
+         agent { label 'devops' }
+         steps {
+            sh "/root/dct-toolkit enable_dsource dsource_id='Ase_1_master'"
+            sh "exit 0"
+         }
+      }
+      stage('start Sybase VDBs') {
          agent { label 'devops' }
          steps {
             parallel(
                 Start_MASK: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action enable -name 'Ase_1_MASK'"
+                      sh "/root/dct-toolkit enable_vdb vdb_id='Ase_1_MASK'"
+                      sh "exit 0"
                     },
                 Start_QA: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Ase QA' -action enable"
+                      sh "/root/dct-toolkit enable_vdb vdb_id='Ase_1_QA'"
+                      sh "exit 0"
                     },
                 Start_DEV: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Ase DEV' -action enable"
+                      sh "/root/dct-toolkit enable_vdb vdb_id='Ase_1_DEV'"
+                      sh "exit 0"
                 }
             )
          }

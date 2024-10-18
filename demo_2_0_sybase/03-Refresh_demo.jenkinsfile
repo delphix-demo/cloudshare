@@ -13,25 +13,25 @@ pipeline {
        stage('Snap Production') {
          agent { label 'devops' }
          steps {
-            sh "/root/dct-toolkit snapshot_dsource dsource_id='Ase_1_master' sync_strategy=new_backup"
+            sh "/root/dct-toolkit snapshot_dsource dsource_id='Sybase_master'"
          }
      }
       stage('Refresh MASK') {
          agent { label 'devops' }
          steps {
-            sh "/root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Ase_1_MASK'"
+            sh "/root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Sybase_MASK'"
          }
       }
       stage('Run MASK job') {
          agent { label 'devops' }
          steps {
-            sh "/root/dct-toolkit execute_masking_job engine_id=cce2 masking_job_id='Sybase_QA_Masking'"
+            sh "/root/dct-toolkit execute_masking_job engine_id=cce6 masking_job_id='Mask'"
          }
       }
       stage('Snap MASK') {
          agent { label 'devops' }
          steps {
-            sh "/root/dct-toolkit snapshot_vdb vdb_id='Ase_1_MASK'"
+            sh "/root/dct-toolkit snapshot_vdb vdb_id='Sybase_MASK'"
          }
       }
       stage('Refresh DEV and QA from MASK') {
@@ -39,10 +39,10 @@ pipeline {
          steps {
             parallel(
                 Refresh_QA: {
-                      sh "/root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Ase_1_QA'"
+                      sh "/root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Sybase_QA'"
                     },
                 Refresh_DEV: {
-                      sh "/root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Ase_1_DEV'"
+                      sh "/root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Sybase_DEV'"
                 }
             )
          }

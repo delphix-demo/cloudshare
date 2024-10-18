@@ -1,0 +1,40 @@
+//
+// Pipeline to destroy DCT environment - Sybase
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Delete environments') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_source: {
+                      sh """
+                         /root/dct-toolkit delete_environment environment_id='Sybase_source' 
+                      """
+                },
+                Delete_staging: {
+                      sh """
+                         /root/dct-toolkit delete_environment environment_id='Sybase_target' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Unregister engines from DCT') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                /root/dct-toolkit unregister_engine engine_id=cde2
+                /root/dct-toolkit unregister_engine engine_id=cce2 
+            """
+         }
+      }
+   }
+}

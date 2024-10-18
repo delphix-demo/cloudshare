@@ -1,0 +1,65 @@
+//
+// Pipeline to create local Demo environment - Sybase
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+DA FARE ******
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Link Dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit link_Sybase_database source_id='Sybase' name='Sybase_master' group_id='Source' environment_user_id='delphix' --link_now
+            """
+         }
+      }
+      stage('Create local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot Sybase source_data_id='Sybase_master' name='Sybase_MASK' database_name='Sybasemask' environment_id='Sybase_target' os_username='Sybaseinst1' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision' 
+            """
+         }
+      }
+      stage('Run Masking job - TO DO') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                sleep 10
+            """
+         }
+      }   
+      stage('Snap local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit snapshot_vdb vdb_id='Sybase_MASK'                       
+            """
+         }
+      }   
+      stage('Create local DEV and QA VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_DEV_VDB: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot Sybase source_data_id='Sybase_MASK' name='Sybase_DEV' database_name='SybaseDEV' environment_id='Sybase_target' os_username='Sybaseinst1' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision' 
+                      """
+                },
+                Create_QA_VDB: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot Sybase source_data_id='Sybase_MASK' name='Sybase_QA' database_name='SybaseQA' environment_id='Sybase_target' os_username='Sybaseinst1' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision' 
+                      """
+                }
+            )
+         }
+      }
+   }
+}
