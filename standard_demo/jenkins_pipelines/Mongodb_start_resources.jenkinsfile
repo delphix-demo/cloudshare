@@ -1,24 +1,26 @@
 //
-// Pipeline to start Mongodb Resources
+// Pipeline to start Mongodb Resources - DCT version
 //
 // Demo:  Standard Demo
 //
-// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
 //
+
 pipeline {
    agent { label 'devops' }
    stages {
       stage('enable Mongodb environments') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Mongodb_Target' -action enable"
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde2 -name 'Mongodb_Source' -action enable"
+            sh "/root/dct-toolkit enable_environment environment_id='Mongodb_Target'"
+            sh "/root/dct-toolkit enable_environment environment_id='Mongodb_Source'"
+            sh "exit 0"
          }
       }
       stage('start Mongodb DSOURCE') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action enable -name 'Mongodb_master'"
+            sh "/root/dct-toolkit enable_dsource dsource_id='Mongodb_master'"
             sh "exit 0"
          }
       }
@@ -27,13 +29,16 @@ pipeline {
          steps {
             parallel(
                 Start_MASK: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde2 -action enable -name 'Mongodb_MASK'"
+                      sh "/root/dct-toolkit enable_vdb vdb_id='Mongodb_MASK'"
+                      sh "exit 0"
                     },
                 Start_QA: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Mongodb QA' -action enable"
+                      sh "/root/dct-toolkit enable_vdb vdb_id='Mongodb_QA'"
+                      sh "exit 0"
                     },
                 Start_DEV: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde2 -container_name 'Mongodb DEV' -action enable"
+                      sh "/root/dct-toolkit enable_vdb vdb_id='Mongodb_DEV'"
+                      sh "exit 0"
                 }
             )
          }

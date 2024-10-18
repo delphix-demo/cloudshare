@@ -1,5 +1,5 @@
 //
-// Pipeline to prepare Source DB for Demo - Sybase
+// Pipeline to prepare Source DB for Demo - MongoDB
 //
 // Demo:  Standard Demo 2.0
 //
@@ -11,7 +11,7 @@ pipeline {
 
    agent { label 'devops' }
    stages {
-      stage('Delete source DB') {
+      stage('Prepare Source DB') {
          agent { label 'devops' }
          steps {
             sh """

@@ -4,17 +4,16 @@
 // Demo:  Standard Demo
 //
 // 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
-// 2023 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
 //
 //
 
 pipeline {
    agent { label 'devops' }
    stages {
-       stage('Snap Production - DUMMY') {
+       stage('Snap Production') {
          agent { label 'devops' }
          steps {
-            sh "echo 'Snap Mongodb Prod'"
+            sh "/root/dct-toolkit snapshot_dsource dsource_id='Mongodb_master'"
          }
      }
       stage('Refresh MASK') {
@@ -26,7 +25,7 @@ pipeline {
       stage('Run MASK job') {
          agent { label 'devops' }
          steps {
-            sh "/root/dct-toolkit execute_masking_job engine_id=cce3 masking_job_id='MaskMongoDB_MASK'"
+            sh "/root/dct-toolkit execute_masking_job engine_id=cce6 masking_job_id='Mask'"
          }
       }
       stage('Snap MASK') {
@@ -50,5 +49,3 @@ pipeline {
       }
    }
 }
-
-

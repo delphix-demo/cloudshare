@@ -1,0 +1,65 @@
+//
+// Pipeline to create local Demo environment - Mongodb
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+DA FARE ******
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Link Dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit link_Mongodb_database source_id='Mongodb' name='Mongodb_master' group_id='Source' environment_user_id='delphix' --link_now
+            """
+         }
+      }
+      stage('Create local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot Mongodb source_data_id='Mongodb_master' name='Mongodb_MASK' database_name='Mongodbmask' environment_id='Mongodb_target' os_username='Mongodbinst1' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision' 
+            """
+         }
+      }
+      stage('Run Masking job - TO DO') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                sleep 10
+            """
+         }
+      }   
+      stage('Snap local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit snapshot_vdb vdb_id='Mongodb_MASK'                       
+            """
+         }
+      }   
+      stage('Create local DEV and QA VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_DEV_VDB: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot Mongodb source_data_id='Mongodb_MASK' name='Mongodb_DEV' database_name='MongodbDEV' environment_id='Mongodb_target' os_username='Mongodbinst1' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision' 
+                      """
+                },
+                Create_QA_VDB: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot Mongodb source_data_id='Mongodb_MASK' name='Mongodb_QA' database_name='MongodbQA' environment_id='Mongodb_target' os_username='Mongodbinst1' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision' 
+                      """
+                }
+            )
+         }
+      }
+   }
+}

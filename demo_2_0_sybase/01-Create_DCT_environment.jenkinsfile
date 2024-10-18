@@ -35,12 +35,12 @@ pipeline {
             parallel(
                 Register_DB2_source: {
                       sh """
-                         /root/dct-toolkit create_environment engine_id="cde2" name="Sybase_source" os_name="UNIX" hostname="10.160.1.63" toolkit_path="/toolkit" username="db2inst1" password="Delphix_123!" description="DB2 source VM" 
+                         /root/dct-toolkit create_environment engine_id="cde2" name="Sybase_source" os_name="UNIX" hostname="10.160.1.63" toolkit_path="/toolkit" username="delphix" password="delphix" description="Sybase source VM" 
                          """
                 },
                Register_DB2_target: {
                       sh """
-                         /root/dct-toolkit create_environment engine_id="cde2" name="Sybase_target" os_name="UNIX" hostname="10.160.1.23" toolkit_path="/toolkit" username="db2inst1" password="Delphix_123!" description="DB2 target VM" 
+                         /root/dct-toolkit create_environment engine_id="cde2" name="Sybase_target" os_name="UNIX" hostname="10.160.1.23" toolkit_path="/toolkit" username="delphix" password="delphix" description="Sybase target VM" 
                          """
                 }
             )
