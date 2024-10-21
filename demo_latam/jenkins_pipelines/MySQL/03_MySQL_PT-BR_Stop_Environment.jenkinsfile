@@ -3,19 +3,19 @@
 //
 // Demo:  PT-BR Localized Demo
 //
-// 2022 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
+// 2024 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
 //
 pipeline {
    agent { label 'devops' }
    stages {
-      stage('stop Mysql DSOURCE') {
+      stage('stop MySQL DSOURCE') {
          agent { label 'devops' }
          steps {
             sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Mysql_master'"
             sh "exit 0"
          }
       }
-      stage('stop Mysql VDBs') {
+      stage('stop MySQL VDBs') {
          agent { label 'devops' }
          steps {
             parallel(
@@ -23,10 +23,10 @@ pipeline {
                       sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Mysql_MASK'"
                     },
                 Stop_QA: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Mysql QA' -action disable"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'QA'"
                     },
                 Stop_DEV: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde1 -container_name 'Mysql DEV' -action disable"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Mysql_DEV'"
                 }
             )
          }
