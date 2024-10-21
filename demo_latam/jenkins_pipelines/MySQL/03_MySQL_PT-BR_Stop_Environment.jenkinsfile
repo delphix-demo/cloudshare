@@ -23,7 +23,7 @@ pipeline {
                       sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Mysql_MASK'"
                     },
                 Stop_QA: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'QA'"
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Mysql_QA'"
                     },
                 Stop_DEV: {
                       sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action disable -name 'Mysql_DEV'"
