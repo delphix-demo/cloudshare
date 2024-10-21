@@ -30,11 +30,11 @@ pipeline {
                 Start_MySQL_MASK: {
                       sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Mysql_MASK'"
                       sh "exit 0"
-                    }
+                    },
                Start_MySQL_QA: {
                       sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Mysql_QA'"
                       sh "exit 0"
-                    }
+                    },
                Start_MySQL_DEV: {
                       sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Mysql_DEV'"
                       sh "exit 0"
