@@ -7,6 +7,9 @@
 //
 pipeline {
    agent { label 'devops' }
+   environment{
+            DIR='/home/delphix/sample-python-app'
+        }
    stages {
       stage('stop MySQL DSOURCE') {
          agent { label 'devops' }
