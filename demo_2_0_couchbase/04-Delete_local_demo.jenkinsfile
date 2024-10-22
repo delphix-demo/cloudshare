@@ -1,0 +1,47 @@
+//
+// Pipeline to destroy local Demo environment  - Couchbase
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Delete local VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_DEV: {
+                      sh """
+                         /root/dct-toolkit delete_vdb vdb_id='Couchbase_DEV' 
+                      """
+                },
+                Delete_QA: {
+                      sh """
+                         /root/dct-toolkit delete_vdb vdb_id='Couchbase_QA' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Delete local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_vdb vdb_id='Couchbase_MASK'
+            """
+         }
+      }
+      stage('Delete dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_dsource  dsource_id='Couchbase_master'
+            """
+         }
+      }
+   }
+}

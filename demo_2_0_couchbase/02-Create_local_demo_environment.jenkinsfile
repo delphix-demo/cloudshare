@@ -1,0 +1,65 @@
+//
+// Pipeline to create local Demo environment - Couchbase
+//
+// Demo:  Standard Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+DA FARE ******
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Link Dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit link_Couchbase_database source_id='Couchbase' name='Couchbase_master' group_id='Source' environment_user_id='delphix' --link_now
+            """
+         }
+      }
+      stage('Create local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot Couchbase source_data_id='Couchbase_master' name='Couchbase_MASK' database_name='Couchbasemask' environment_id='Couchbase_staging' os_username='delphix' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision' 
+            """
+         }
+      }
+      stage('Run Masking job - TO DO') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                sleep 10
+            """
+         }
+      }   
+      stage('Snap local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit snapshot_vdb vdb_id='Couchbase_MASK'                       
+            """
+         }
+      }   
+      stage('Create local DEV and QA VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_DEV_VDB: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot Couchbase source_data_id='Couchbase_MASK' name='Couchbase_DEV' database_name='DB2DEV' environment_id='Couchbase_target_DEV' os_username='delphix' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision' 
+                      """
+                },
+                Create_QA_VDB: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot Couchbase source_data_id='Couchbase_MASK' name='Couchbase_QA' database_name='DB2QA' environment_id='Couchbase_target_QA' os_username='delphix' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision' 
+                      """
+                }
+            )
+         }
+      }
+   }
+}

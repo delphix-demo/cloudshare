@@ -1,17 +1,18 @@
 //
-// Pipeline to stop Couchbase Resources
+// Pipeline to stop Couchbase Resources - DCT Version
 //
-// Demo:  Couchbase Demo
+// Demo:  Standard Demo
 //
-// 2022 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
 //
+
 pipeline {
    agent { label 'devops' }
    stages {
       stage('stop Couchbase DSOURCE') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde3 -action disable -name 'Couchbase_master'"
+            sh "/root/dct-toolkit disable_dsource dsource_id='Couchbase_master'"
             sh "exit 0"
          }
       }
@@ -20,13 +21,13 @@ pipeline {
          steps {
             parallel(
                 Stop_MASK: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde3 -action disable -name 'Couchbase_MASK'"
+                      sh "/root/dct-toolkit disable_vdb vdb_id='Couchbase_MASK'"
                     },
                 Stop_QA: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde3 -container_name 'Couchbase QA' -action disable"
+                      sh "/root/dct-toolkit disable_vdb vdb_id='Couchbase_QA'"
                     },
                 Stop_DEV: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_js_container -d democde3 -container_name 'Couchbase DEV' -action disable"
+                      sh "/root/dct-toolkit disable_vdb vdb_id='Couchbase_DEV'"
                 }
             )
          }
@@ -34,11 +35,10 @@ pipeline {
       stage('Disable Couchbase environments') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde3 -name 'Couchbase_MaskGC' -action disable"
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde3 -name 'Couchbase_Staging' -action disable"
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde3 -name 'Couchbase_Target_DEV' -action disable"
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde3 -name 'Couchbase_Target_QA' -action disable"
-
+            sh "/root/dct-toolkit disable_environment environment_id='Couchbase_Staging'"
+            sh "/root/dct-toolkit disable_environment environment_id='Couchbase_MaskGC'"
+            sh "/root/dct-toolkit disable_environment environment_id='Couchbase_Target_DEV'"
+            sh "/root/dct-toolkit disable_environment environment_id='Couchbase_Target_QA'"
          }
       }
    }
