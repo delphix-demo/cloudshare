@@ -3,32 +3,43 @@
 //
 // Demo:  PT-BR Localized Demo
 //
-// 2022 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
+// 2024 (c) Delphix - Felipe Casali (felipe.casali@delphix.com)
 //
 pipeline {
    agent { label 'devops' }
+   environment{
+            DIR='/home/delphix/sample-python-app'
+        }
    stages {
-      stage('enable Sqlserver environments') {
+      stage('enable MySQL environments') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Sqlserver_Target' -action enable"
-            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Sqlserver_Source' -action enable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Oracle_Target' -action enable"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_env -d democde1 -name 'Oracle_Source' -action enable"
             sh "exit 0"
          }
       }
-       stage('start Sqlserver DSOURCE') {
+       stage('start MySQL DSOURCE') {
          agent { label 'devops' }
          steps {
-            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'flaskapp'"
+            sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Mysql_master'"
             sh "exit 0"
          }
       }
-      stage('start Sqlserver VDBs') {
+      stage('start MySQL VDBs') {
          agent { label 'devops' }
          steps {
             parallel(
-                Start_MASK: {
-                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'flaskapp_mask'"
+                Start_MySQL_MASK: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Mysql_MASK'"
+                      sh "exit 0"
+                    },
+               Start_MySQL_QA: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Mysql_QA'"
+                      sh "exit 0"
+                    },
+               Start_MySQL_DEV: {
+                      sh "/home/delphix/dxtoolkit2/dx_ctl_db -d democde1 -action enable -name 'Mysql_DEV'"
                       sh "exit 0"
                     }
             )
@@ -37,34 +48,34 @@ pipeline {
       stage('configure PTBR app on Source DB') {
         agent { label 'devops' }
         steps {
-            sh "docker run --rm --env-file ${DIR}/.env.mssql.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest migrations_seed.py"
-            sh "docker run --rm --env-file ${DIR}/.env.mssql.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest migrations_custom.py"
+            sh "docker run --rm --env-file ${DIR}/.env.mysql.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mysql:latest migrations_seed.py"
+            sh "docker run --rm --env-file ${DIR}/.env.mysql.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mysql:latest migrations_custom.py"
         }
      }
-     stage('Snap Production') {
+     stage('Snap MySQL Prod') {
          agent { label 'devops' }
          steps {
             sh "/home/delphix/dxtoolkit2/dx_snapshot_db -d democde1 -name 'Mysql_master'"
          }
       }
-      stage('Refresh MASK') {
+      stage('Refresh MySQL MASK') {
          agent { label 'devops' }
          steps {
             sh "/home/delphix/dxtoolkit2/dx_refresh_db -d democde1 -name 'Mysql_MASK'"
          }
       }
-     stage('start PT_BR FlaskApp') {
+     stage('start PT_BR MySQL') {
         agent { label 'devops' }
         steps {
             parallel(
                Start_Prod_APP: {
-                     sh "docker run -d --env-file ${DIR}/.env.mssql.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest"
+                     sh "docker run -d --env-file ${DIR}/.env.mysql.prod -p 8081:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mysql:latest"
                    },
                Start_QA_APP: {
-                     sh "docker run -d --env-file ${DIR}/.env.mssql.qa -p 8082:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest"
+                     sh "docker run -d --env-file ${DIR}/.env.mysql.qa -p 8082:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mysql:latest"
                    },
                Start_DEV_APP: {
-                     sh "docker run -d --env-file ${DIR}/.env.mssql.dev -p 8083:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mssql:latest"
+                     sh "docker run -d --env-file ${DIR}/.env.mysql.dev -p 8083:5000/tcp -v ${DIR}/models-br.yaml:/usr/src/app/models.yaml dcstolf/flask-app-mysql:latest"
                }
            )
            }
