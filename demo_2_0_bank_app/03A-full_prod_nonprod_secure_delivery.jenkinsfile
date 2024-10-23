@@ -18,8 +18,7 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/8168141e-3d8c-4664-a393-52256ba5b900/generatefile' -X POST -u $BMID -H 'accept: text/csv' > bm_patient_data_2nd_run.csv 
-               curl 'https://tdm.blazemeter.com/api/v1/workspaces/2066593/datamodels/19a3fd42-29d0-4e02-9b9d-69305e754e0f/generatefile' -X POST -u $BMID -H 'accept: text/csv' > bm_patient_visit_data_2nd_run.csv 
+               exit 0
             """
          }
       }   
@@ -27,8 +26,7 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "COPY patient(address,first_name,last_name,dob,ssn,marital_status,city,state,mail,zipcode,phone) FROM '/var/lib/pgsql/bm_patient_data_2nd_run.csv' DELIMITER ',' CSV HEADER;" 
-               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "COPY patient_visit(patient_id,visit_date,copay,primary_reason,notes) FROM '/var/lib/pgsql/bm_patient_visit_data_2nd_run.csv' DELIMITER ',' CSV HEADER;" 
+               exit 0
                """
          }
       } 
@@ -36,7 +34,7 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "select 'Patient' as Table, count(*) as rows from public.patient union all select 'Patient_visit', count(*) from public.patient_visit;" 
+               exit 0
                """
          }
       }   
@@ -61,7 +59,7 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Masking_patients' 
+               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Bank' 
                """
          }
       }  
@@ -103,9 +101,7 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "select 'Patient_SRC'as Table, count(*) as rows from public.patient union all select 'Patient_visit_SRC' as Table, count(*) as rows from public.patient_visit;"            
-               psql -p 6432 -h 10.160.1.75 -U postgres -d delphixdb -c "select 'Patient_DEVR'as Table, count(*) as rows from public.patient union all select 'Patient_visit_DEVR' as Table, count(*) as rows from public.patient_visit;"            
-               psql -p 7432 -h 10.160.1.75 -U postgres -d delphixdb -c "select 'Patient_DEVT'as Table, count(*) as rows from public.patient union all select 'Patient_visit_QAR' as Table, count(*) as rows from public.patient_visit;"            
+               exit 0
             """
          }
       } 
