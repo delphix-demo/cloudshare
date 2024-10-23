@@ -1,0 +1,57 @@
+//
+// Pipeline to replicate and provision remote DEV and QA VDBs , showing Prod-NonProd and cloud migration 
+//
+// Demo:  Demo 2.0 Bank App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create replication profile for MASK') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_replication_profile name='Prod-noprod' description='SDD Replica from Production to Non Production' engine_id=sourcecde target_engine_id=targetcde vdb_ids="Postgres_MASK" --encrypted --no-automatic_replication replication_mode=MASKED_DATA_DISTRIBUTION --enable_tag_replication
+            """
+         }
+      }   
+      stage('Execute replication profile') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit execute_replication_profile replication_profile_id='Prod-noprod' 
+               """
+         }
+      } 
+      stage('Create remote DEVR VDB from replicated MASK') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_MASK' name='Postgres_DEVR' postgres_port='6432' environment_id='Postgres Target' environment_user_id='postgres' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision/postgres_DEV' engine_id=targetcde 
+               """
+         }
+      }   
+      stage('Create remote QAR VDB from replicated MASK') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot postgres  source_data_id='Postgres_MASK' name='Postgres_QAR' postgres_port='7432' environment_id='Postgres Target' environment_user_id='postgres' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision/postgres_QA' engine_id=targetcde 
+               """
+         }
+      }
+      stage('Show QAR vs DEVR vs Source rows') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb -c "select 'Patient_SRC'as Table, count(*) as rows from public.patient union all select 'Patient_visit_SRC' as Table, count(*) as rows from public.patient_visit;"            
+               psql -p 6432 -h 10.160.1.75 -U postgres -d delphixdb -c "select 'Patient_DEVR'as Table, count(*) as rows from public.patient union all select 'Patient_visit_DEVR' as Table, count(*) as rows from public.patient_visit;"            
+               psql -p 7432 -h 10.160.1.75 -U postgres -d delphixdb -c "select 'Patient_DEVT'as Table, count(*) as rows from public.patient union all select 'Patient_visit_QAR' as Table, count(*) as rows from public.patient_visit;"            
+            """
+         }
+      }
+   }
+}

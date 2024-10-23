@@ -1,0 +1,27 @@
+//
+// Pipeline to prepare Source DB for Demo
+//
+// Demo:  Demo 2.0 Bank App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create source DB tables') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb <<EOF 
+CREATE USER digitaluser WITH PASSWORD 'Delphix_123!';
+CREATE DATABASE digitalbank;
+GRANT ALL PRIVILEGES ON DATABASE digitalbank TO digitaluser;
+EOF
+"""
+         }
+      }
+   }
+}

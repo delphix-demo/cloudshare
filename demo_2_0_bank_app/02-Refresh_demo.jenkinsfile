@@ -1,0 +1,92 @@
+//
+// Pipeline to Refresh Demo environment, showing Data Secure Delivery 
+//
+// Demo:  Demo 2.0 Bank App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+
+pipeline {
+
+   agent { label 'devops' }
+   environment {
+      BMID = credentials('Blazemeter-ID')
+   }
+   stages {
+      stage('Generate new synthetic data for Source') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0
+            """
+         }
+      }   
+      stage('Add new synthetic data to Source') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0
+               """
+         }
+      } 
+      stage('Show number of loaded rows') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0
+               """
+         }
+      }   
+      stage('Snap Source') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit snapshot_dsource dsource_id='Postgres_master' 
+               """
+         }
+      }   
+      stage('Refresh MASK from latest snapshot') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                export vdb_name="\$(/root/dct-toolkit search_vdbs name='Postgres_MASK' --no-is_replica -js -jp 'items[0].id')"
+                /root/dct-toolkit refresh_vdb_by_snapshot vdb_id=\${vdb_name}                
+            """
+         }
+      }   
+      stage('Run Masking job on MASK') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0
+               """
+         }
+      }  
+      stage('Snap local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                export vdb_name="\$(/root/dct-toolkit search_vdbs name='Postgres_MASK' --no-is_replica -js -jp 'items[0].id')"
+               /root/dct-toolkit snapshot_vdb vdb_id=\${vdb_name}
+               """
+         }
+      }  
+      stage('Refresh QA VDB with latest data') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Postgres_QA'  
+               """
+         }
+      }  
+      stage('Show row count DEV vs QA') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0
+               """
+         }
+      }  
+   }
+}

@@ -1,0 +1,112 @@
+//
+// Pipeline to create local Demo environment
+//
+// Demo:  Demo 2.0 Bank App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   environment {
+      BMID = credentials('Blazemeter-ID')
+   }
+   stages {
+      stage('Create Postgres Source') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_postgres_source environment_id="Postgres Source" name="Postgres_master" repository_id="Postgres vFiles (15.0)" 
+            """
+         }
+      }
+      stage('Link Dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit link_appdata_database source_id="Postgres_master" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_master","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.29", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5433, "configSettingsStg":[]}' 
+            """
+         }
+      }
+      stage('Create local BUGFIX VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_master' name='Postgres_BUGFIX' postgres_port='5445' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='Bugfix' mount_point='/mnt/provision/postgres_BUGFIX' 
+            """
+         }
+      }
+      stage('Create local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_master' name='Postgres_MASK' postgres_port='5444' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision/postgres_MASK' --masked             
+            """
+         }
+      }
+      stage('Run Masking job') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0 
+            """
+         }
+      }   
+      stage('Snap local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit snapshot_vdb vdb_id='Postgres_MASK'                       
+            """
+         }
+      }   
+      stage('Show masked rows MASK vs BUGFIX') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0
+            """
+         }
+      } 
+      stage('Create local QA VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_MASK' name='Postgres_QA' postgres_port='7432' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision/postgres_QA'             """
+         }
+      }  
+      stage('Create local DEV VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_MASK' name='Postgres_DEV' postgres_port='6432' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision/postgres_DEV'  
+            """
+         }
+      }
+      stage('Generate synthetic data for DEV') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0
+            """
+         }
+      }   
+      stage('Load synthetic data for DEV') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0
+            """
+         }
+      } 
+      stage('Show QA vs DEV rows') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0
+               """
+         }
+      }   
+   }
+}
