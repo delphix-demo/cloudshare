@@ -24,6 +24,7 @@ pipeline {
          steps {
             sh """
                /root/dct-toolkit execute_replication_profile replication_profile_id='Prod-noprod' 
+               sleep 40
                """
          }
       } 
@@ -40,7 +41,6 @@ pipeline {
          steps {
             sh """
                /root/dct-toolkit provision_vdb_by_snapshot postgres  source_data_id='Postgres_MASK' name='Postgres_QAR' postgres_port='7432' environment_id='Postgres Target' environment_user_id='postgres' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision/postgres_QA' engine_id=targetcde 
-               sleep 30
                """
          }
       }
