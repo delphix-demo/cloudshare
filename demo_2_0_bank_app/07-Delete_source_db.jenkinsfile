@@ -16,8 +16,8 @@ pipeline {
          steps {
             sh """
             psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb <<EOF 
-DROP USER IF EXISTS digitaluser;
 DROP DATABASE IF EXISTS digitalbank;
+DROP USER IF EXISTS digitaluser;
 EOF
 """
          }
