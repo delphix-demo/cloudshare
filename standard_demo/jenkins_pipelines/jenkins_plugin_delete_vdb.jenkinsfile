@@ -1,4 +1,4 @@
-//
+e//
 // Pipeline to Delete Postgres VDB
 //
 // Demo:  Standard Demo
@@ -8,7 +8,7 @@
 pipeline {
    agent any
    stages {
-      stage('Create Postgres_TEST VDB') {
+      stage('Delete Postgres_TEST VDB') {
          steps {
             deleteVDB credentialId: 'DCT-API-KEY-JENKINS-PLUGIN', name: 'Postgres_TEST'
          }
