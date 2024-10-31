@@ -72,13 +72,23 @@ pipeline {
                """
          }
       }  
-      stage('Refresh QA VDB with latest data') {
+      stage('Refresh DEV and QA VDBs with latest data') {
          agent { label 'devops' }
          steps {
-            sh """
-               /root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Postgres_QA'  
-               """
+            parallel(
+                Refresh_DEV: {
+                      sh """
+                         /root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Postgres_DEV'  
+                      """
+                },
+                Refresh_QA: {
+                      sh """
+                         /root/dct-toolkit refresh_vdb_by_snapshot vdb_id='Postgres_QA'  
+                      """
+                }
+            )
          }
+
       }  
       stage('Show row count DEV vs QA') {
          agent { label 'devops' }
