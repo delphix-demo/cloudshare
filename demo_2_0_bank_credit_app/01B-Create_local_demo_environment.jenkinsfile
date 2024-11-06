@@ -1,0 +1,150 @@
+//
+// Pipeline to create local Demo environment
+//
+// Demo:  Demo 2.0 Bank & Credit App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create Postgres Sources') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_source_bank: {
+                      sh """
+                         /root/dct-toolkit create_postgres_source environment_id="Postgres Source 1" name="Postgres_bank" repository_id="Postgres vFiles (15.0)"   
+                      """
+                },
+                Create_source_credit: {
+                      sh """
+                         /root/dct-toolkit create_postgres_source environment_id="Postgres Source 2" name="Postgres_credit" repository_id="Postgres vFiles (15.0)"   
+                      """
+                }
+            )
+         }
+      }
+      stage('Link Bank and Credit Dsources') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_dsource_bank: {
+                      sh """
+                         /root/dct-toolkit link_appdata_database source_id="Postgres_bank" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source 1" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_bank","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.29", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5433, "configSettingsStg":[]}' 
+                      """
+                },
+                Create_dsource_credit: {
+                      sh """
+                         /root/dct-toolkit link_appdata_database source_id="Postgres_credit" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source 2" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_credit","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.30", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5433, "configSettingsStg":[]}' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Create local BUGFIX VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_bugfix_bank: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_bank' name='Postgres_bank_BUGFIX' postgres_port='5450' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='Bugfix' mount_point='/mnt/provision/postgres_bank_BUGFIX' 
+                      """
+                },
+                Create_bugfix_credit: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_credit' name='Postgres_credit_BUGFIX' postgres_port='5451' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='Bugfix' mount_point='/mnt/provision/postgres_credit_BUGFIX' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Create local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_mask_bank: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_bank' name='Postgres_bank_MASK' postgres_port='5444' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision/postgres_bank_MASK' --masked             
+                      """
+                },
+                Create_mask_credit: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_credit' name='Postgres_credit_MASK' postgres_port='5445' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='MaskGC' mount_point='/mnt/provision/postgres_credit_MASK' --masked             
+                      """
+                }
+            )
+         }
+      }
+      stage('Create VDB Groups BUGFIX and MASK') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_vdb_group name='Bankapp_BUGFIX' vdb_ids='Postgres_bank_BUGFIX,Postgres_credit_BUGFIX'
+               /root/dct-toolkit create_vdb_group name='Bankapp_MASK' vdb_ids='Postgres_bank_MASK,Postgres_credit_MASK'
+            """
+         }
+      }
+      stage('Run Masking jobs') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0 
+            """
+         }
+      }   
+      stage('Bookmark local MASK VDB Group') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_bookmark vdb_group_id="Bankapp_MASK" name="PIT \$(date -u)" 
+            """
+         }
+      }   
+      stage('Create local QA VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_qa_bank: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_bank_MASK' name='Postgres_bank_QA' postgres_port='7432' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision/postgres_bank_QA'
+                      """
+                },
+                Create_qa_credit: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_credit_MASK' name='Postgres_credit_QA' postgres_port='7433' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision/postgres_credit_QA'
+                      """
+                }
+            )
+         }
+      }  
+      stage('Create local DEV VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_dev_bank: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_bank_MASK' name='Postgres_bank_DEV' postgres_port='6432' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision/postgres_bank_DEV'
+                      """
+                },
+                Create_dev_credit: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_credit_MASK' name='Postgres_credit_DEV' postgres_port='6433' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision/postgres_credit_DEV'
+                      """
+                }
+            )
+         }
+      }  
+      stage('Create VDB Groups DEV and QA') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_vdb_group name='Bankapp_DEV' vdb_ids='Postgres_bank_DEV,Postgres_credit_DEV'
+               /root/dct-toolkit create_vdb_group name='Bankapp_QA' vdb_ids='Postgres_bank_QA,Postgres_credit_QA'
+            """
+         }
+      }
+   }
+}

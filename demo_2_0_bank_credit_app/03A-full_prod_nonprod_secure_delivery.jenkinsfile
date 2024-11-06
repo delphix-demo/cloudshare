@@ -1,0 +1,82 @@
+//
+// Pipeline to show Secure Data Delivery from Prod to Non-prod
+//
+// Demo:  Demo 2.0 Bank & Credit App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+
+pipeline {
+
+   agent { label 'devops' }
+
+   stages {  
+      stage('Snap Sources') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Snap_source_bank: {
+                      sh """
+                         /root/dct-toolkit snapshot_dsource dsource_id='Postgres_bank' 
+                      """
+                },
+                Snap_source_credit: {
+                      sh """
+                         /root/dct-toolkit snapshot_dsource dsource_id='Postgres_credit' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Refresh MASK VDB Group from latest snapshot') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_MASK'
+            """
+         }
+      }   
+      stage('Run Masking job on MASK') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               exit 0
+            """
+         }
+      }
+      stage('Bookmark local MASK VDB Group') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_bookmark vdb_group_id='Bankapp_MASK' name="PIT \$(date -u)"
+            """
+         }
+      }  
+      stage('Execute replication profile') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit execute_replication_profile replication_profile_id='Prod-noprod' 
+            """
+         }
+      } 
+      stage('Refresh remote DEV and QA VDB Groups with latest Bookmark') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_vdbroup_remote_DEV: {
+                      sh """
+                         /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_DEVR'
+                      """
+                },
+                Refresh_vdbgroup_remote_QA: {
+                      sh """
+                         /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_QAR'
+                      """
+                }
+            )
+         }
+      }        
+   }
+}

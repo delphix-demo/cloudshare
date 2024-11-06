@@ -1,0 +1,37 @@
+//
+// Pipeline to Delete Source DB for Demo
+//
+// Demo:  Demo 2.0 Bank & Credit App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Delete source #1 DB tables') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb <<EOF 
+DROP DATABASE IF EXISTS digitalbank;
+DROP USER IF EXISTS digitaluser;
+EOF
+"""
+         }
+      }
+      stage('Delete source #2 DB tables') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            psql -p 5432 -h 10.160.1.30 -U postgres -d delphixdb <<EOF 
+DROP DATABASE IF EXISTS digitalbank;
+DROP USER IF EXISTS digitaluser;
+EOF
+"""
+         }
+      }
+   }
+}

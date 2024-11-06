@@ -1,0 +1,75 @@
+//
+// Pipeline to replicate and provision remote DEV and QA VDBs , showing Prod-NonProd and cloud migration 
+//
+// Demo:  Demo 2.0 Bank & Credit App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create replication profile for MASK') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_replication_profile name='Prod-noprod' description='SDD Replica from Production to Non Production' engine_id=sourcecde target_engine_id=targetcde vdb_ids="Postgres_bank_MASK,Postgres_credit_MASK" --encrypted --no-automatic_replication replication_mode=MASKED_DATA_DISTRIBUTION --enable_tag_replication
+            """
+         }
+      }   
+      stage('Execute replication profile') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit execute_replication_profile replication_profile_id='Prod-noprod' 
+               sleep 40
+               """
+         }
+      }
+      stage('Create remote QA VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_remote_qa_bank: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres engine_id=targetcde source_data_id='Postgres_bank_MASK' name='Postgres_bank_QAR' postgres_port='7432' environment_id='Postgres Target' environment_user_id='postgres' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision/postgres_bank_QAR'
+                      """
+                },
+                Create_remote_qa_credit: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres engine_id=targetcde source_data_id='Postgres_credit_MASK' name='Postgres_credit_QAR' postgres_port='7433' environment_id='Postgres Target' environment_user_id='postgres' --auto_select_repository target_group_id='QA' mount_point='/mnt/provision/postgres_credit_QAR'
+                      """
+                }
+            )
+         }
+      }  
+      stage('Create remote DEV VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Create_dev_bank: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres engine_id=targetcde source_data_id='Postgres_bank_MASK' name='Postgres_bank_DEVR' postgres_port='6432' environment_id='Postgres Target' environment_user_id='postgres' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision/postgres_bank_DEVR'
+                      """
+                },
+                Create_dev_credit: {
+                      sh """
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres engine_id=targetcde source_data_id='Postgres_credit_MASK' name='Postgres_credit_DEVR' postgres_port='6433' environment_id='Postgres Target' environment_user_id='postgres' --auto_select_repository target_group_id='DEV' mount_point='/mnt/provision/postgres_credit_DEVR'
+                      """
+                }
+            )
+         }
+      }  
+      stage('Create VDB Groups DEV and QA') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_vdb_group name='Bankapp_DEVR' vdb_ids='Postgres_bank_DEVR,Postgres_credit_DEVR'
+               /root/dct-toolkit create_vdb_group name='Bankapp_QAR' vdb_ids='Postgres_bank_QAR,Postgres_credit_QAR'
+            """
+         }
+      }
+   }
+}

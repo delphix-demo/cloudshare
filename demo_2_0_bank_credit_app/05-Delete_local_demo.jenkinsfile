@@ -1,0 +1,77 @@
+//
+// Pipeline to destroy local Demo environment
+//
+// Demo:  Demo 2.0 Bank & Credit App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Delete VDB Groups') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_vdb_group vdb_group_id='Bankapp_DEV'
+               /root/dct-toolkit delete_vdb_group vdb_group_id='Bankapp_QA'
+               /root/dct-toolkit delete_vdb_group vdb_group_id='Bankapp_MASK'
+               /root/dct-toolkit delete_vdb_group vdb_group_id='Bankapp_BUGFIX'
+            """
+         }
+      }
+      stage('Delete local VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_DEV: {
+                      sh """
+                         /root/dct-toolkit delete_vdb  vdb_id='Postgres_bank_DEV' 
+                         /root/dct-toolkit delete_vdb  vdb_id='Postgres_credit_DEV' 
+                      """
+                },
+                Delete_QA: {
+                      sh """
+                         /root/dct-toolkit delete_vdb  vdb_id='Postgres_bank_QA' 
+                         /root/dct-toolkit delete_vdb  vdb_id='Postgres_credit_QA' 
+
+                      """
+                },
+                Delete_BUGFIX: {
+                      sh """
+                         /root/dct-toolkit delete_vdb  vdb_id='Postgres_bank_BUGFIX' 
+                         /root/dct-toolkit delete_vdb  vdb_id='Postgres_credit_BUGFIX' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Delete local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_vdb  vdb_id='Postgres_bank_MASK'
+               /root/dct-toolkit delete_vdb  vdb_id='Postgres_credit_MASK'
+            """
+         }
+      }
+      stage('Delete dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_dsource  dsource_id='Postgres_bank'
+               /root/dct-toolkit delete_dsource  dsource_id='Postgres_credit'
+               sleep 20 
+            """
+         }
+      }
+      stage('Delete source') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_source  source_id='Postgres_bank'
+               /root/dct-toolkit delete_source  source_id='Postgres_credit'
+            """
+         }
+      }
+   }
+}

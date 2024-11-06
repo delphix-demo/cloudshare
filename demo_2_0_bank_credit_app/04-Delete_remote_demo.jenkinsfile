@@ -1,0 +1,59 @@
+//
+// Pipeline to destroy remote Demo environment
+//
+// Demo:  Demo 2.0 Bank & Credit App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Delete remote VDB Groups') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_vdb_group vdb_group_id='Bankapp_DEVR'
+               /root/dct-toolkit delete_vdb_group vdb_group_id='Bankapp_QAR'
+            """
+         }
+      }
+      stage('Destroy remote VDBs') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_DEVR: {
+                      sh """
+                         /root/dct-toolkit delete_vdb vdb_id='Postgres_bank_DEVR' 
+                         /root/dct-toolkit delete_vdb vdb_id='Postgres_credit_DEVR' 
+                      """
+                },
+                Delete_QAR: {
+                      sh """
+                         /root/dct-toolkit delete_vdb vdb_id='Postgres_bank_QAR' 
+                         /root/dct-toolkit delete_vdb vdb_id='Postgres_credit_QAR' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Delete namespace') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                export repl_tag="\$(/root/dct-toolkit search_replication_profiles name='Prod-noprod' -js -jp 'items[0].replication_tag')"
+                export namespace="\$(/root/dct-toolkit search_namespaces tag=\${repl_tag} -js -jp 'items[0].name')"
+                /root/dct-toolkit delete_namespace namespace_id=\${namespace}
+            """
+         }
+      }
+      stage('Delete replication profile') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_replication_profile replication_profile_id='Prod-noprod' 
+            """
+         }
+      }
+   }
+}
