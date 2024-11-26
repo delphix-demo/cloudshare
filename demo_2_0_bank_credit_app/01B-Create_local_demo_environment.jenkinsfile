@@ -38,7 +38,7 @@ pipeline {
                 },
                 Create_dsource_credit: {
                       sh """
-                         /root/dct-toolkit link_appdata_database source_id="Postgres_credit" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source 2" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_credit","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.30", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5433, "configSettingsStg":[]}' 
+                         /root/dct-toolkit link_appdata_database source_id="Postgres_credit" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source 2" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_credit","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.30", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5434, "configSettingsStg":[]}' 
                       """
                 }
             )
