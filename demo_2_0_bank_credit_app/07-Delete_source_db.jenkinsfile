@@ -27,7 +27,7 @@ EOF
          steps {
             sh """
             psql -p 5432 -h 10.160.1.30 -U postgres -d delphixdb <<EOF 
-DROP DATABASE IF EXISTS digitalbank;
+DROP DATABASE IF EXISTS digitalcredit;
 DROP USER IF EXISTS digitaluser;
 EOF
 """
