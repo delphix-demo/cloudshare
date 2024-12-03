@@ -91,7 +91,8 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               exit 0 
+               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Bank' 
+               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Credit' 
             """
          }
       }   
