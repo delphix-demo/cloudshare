@@ -15,7 +15,7 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit create_replication_profile name='Prod-noprod' description='SDD Replica from Production to Non Production' engine_id=sourcecde target_engine_id=targetcde vdb_ids="Postgres_bank_MASK,Postgres_credit_MASK" --encrypted --no-automatic_replication replication_mode=MASKED_DATA_DISTRIBUTION --enable_tag_replication
+               /root/dct-toolkit create_replication_profile name='Prod-noprod' description='SDD Replica from Production to Non Production' engine_id=sourcecde target_engine_id=targetcde vdb_ids="Postgres_bank_MASK,Postgres_credit_MASK" --encrypted --no-automatic_replication replication_mode=MASKED_DATA_DISTRIBUTION
             """
          }
       }   
