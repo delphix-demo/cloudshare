@@ -1,0 +1,66 @@
+//
+// Pipeline for Automated Test with error for a VDB Group
+//
+// Demo:  Demo 2.0 Bank & Credit App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Delete demo bookmarks') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_bookmark bookmark_id='BUGFIX Pre-test' || true
+            """
+            sh """
+               /root/dct-toolkit delete_bookmark bookmark_id='BUGFIX Error # 12345' || true
+            """
+         }    
+      }
+
+      stage('Bookmark BUGFIX pre-test') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c 'select id,username,password from public.users'
+               psql -p 5451 -h 10.160.1.74 -d digitalcredit -U postgres -c 'select id,username,password from public.users'
+            """
+            sh """
+               /root/dct-toolkit create_bookmark vdb_group_id='Bankapp_BUGFIX' name="BUGFIX Pre-test"
+            """
+         }
+      }
+       stage('Run Test that corrupts data') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "update public.users set password='blabla'"
+                psql -p 5451 -h 10.160.1.74 -d digitalcredit -U postgres -c "update public.users set password='blabla'"
+            """
+         }
+      }
+      stage('Get Shared Bookmark for Developer') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_bookmark vdb_group_id='Bankapp_BUGFIX' name="BUGFIX Error # 12345" tags team=DEV
+            """
+         }
+      }
+      stage('Rewind BUGFIX to Pre-test bookmark') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit refresh_vdb_group vdb_group_id='Bankapp_BUGFIX' bookmark_id='BUGFIX Pre-test'
+            """
+            sh """
+               psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c 'select id,username,password from public.users'
+               psql -p 5451 -h 10.160.1.74 -d digitalcredit -U postgres -c 'select id,username,password from public.users'
+            """
+         }
+      }
+   }
+}
