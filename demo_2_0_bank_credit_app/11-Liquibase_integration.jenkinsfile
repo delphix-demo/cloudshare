@@ -1,0 +1,70 @@
+
+//
+// Delphix Postgres Liquibase Demo
+//
+// Demo:  Demo 2.0 Bank & Credit App
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+// 
+pipeline {
+   agent { label 'devops' }
+   stages {
+      stage('Refresh BUGFIX from Prod') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_BUGFIX'
+            """
+            sh """
+                psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users"
+            """
+         }
+      }
+      stage('Alter BUGFIX structure') {
+         agent { label 'devops' }
+         steps {
+            sh """
+psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "alter table public.users ADD "website" VARCHAR(255)
+ DEFAULT 'http://www.prova.com' NOT NULL"
+            """
+            sh """
+                psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users"
+            """
+         }
+      }
+      stage('Get Delta between BUGFIX and Prod') {
+         agent { label 'devops' }
+         steps {
+            sh """
+printf "Use Liquibase to get delta between Postgres_DEV_lbase and Production\n"
+rm -f change.postgres.sql && /root/liquibase/liquibase --username=postgres --password=delphix --url=jdbc:postgresql://10.160.1.29:5432/digitalbank --referenceUsername=postgres --referencePassword=delphix --referenceUrl=jdbc:postgresql://10.160.1.74:5450/digitalbank --classpath=/root/liquibase/internal/lib/postgresql.jar --changeLogFile=/tmp/change.postgres.sql diffchangelog
+printf "These are metadata changes, produced by Liquibase in file change.postgres.sql\n"
+cat /tmp/change.postgres.sql
+            """
+         }
+      }
+      stage('Refresh BUGFIX with Prod - loose changes') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_BUGFIX'
+            """
+            sh """
+               psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users"
+            """
+         }
+      }
+      stage('Apply and verify Liquibase Delta') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -f /tmp/change.postgres.sql
+            """
+            sh """
+               psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users"
+            """
+         }
+      }
+   }
+}
