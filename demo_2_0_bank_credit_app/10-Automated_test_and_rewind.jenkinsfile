@@ -40,7 +40,10 @@ pipeline {
                 psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "update public.users set password='blabla'"
                 psql -p 5451 -h 10.160.1.74 -d digitalcredit -U postgres -c "update public.users set password='blabla'"
             """
-         }
+            sh """
+               psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c 'select id,username,password from public.users'
+               psql -p 5451 -h 10.160.1.74 -d digitalcredit -U postgres -c 'select id,username,password from public.users'
+            """         }
       }
       stage('Get Shared Bookmark for Developer') {
          agent { label 'devops' }
