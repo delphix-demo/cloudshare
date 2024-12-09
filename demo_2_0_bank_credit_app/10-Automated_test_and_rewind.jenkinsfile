@@ -9,6 +9,14 @@
 pipeline {
    agent { label 'devops' }
    stages {
+      stage('Refresh BUGFIX VDB Group from latest snapshot') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_BUGFIX'
+            """
+         }
+      }  
       stage('Delete demo bookmarks') {
          agent { label 'devops' }
          steps {
