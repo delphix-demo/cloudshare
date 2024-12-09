@@ -1,7 +1,7 @@
 //
 // Pipeline to create local Demo environment
 //
-// Demo:  Demo 2.0 Bank & Credit App
+// Demo:  Digital Bank Demo 2.0
 //
 // 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
 //
@@ -44,18 +44,18 @@ pipeline {
             )
          }
       }
-      stage('Create local BUGFIX VDBs') {
+      stage('Create local HOTFIX VDBs') {
          agent { label 'devops' }
          steps {
             parallel(
-                Create_bugfix_bank: {
+                Create_HOTFIX_bank: {
                       sh """
-                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_bank' name='Postgres_bank_BUGFIX' postgres_port='5450' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='Bugfix' mount_point='/mnt/provision/postgres_bank_BUGFIX' 
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_bank' name='Postgres_bank_HOTFIX' postgres_port='5450' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='HOTFIX' mount_point='/mnt/provision/postgres_bank_HOTFIX' 
                       """
                 },
-                Create_bugfix_credit: {
+                Create_HOTFIX_credit: {
                       sh """
-                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_credit' name='Postgres_credit_BUGFIX' postgres_port='5451' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='Bugfix' mount_point='/mnt/provision/postgres_credit_BUGFIX' 
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_credit' name='Postgres_credit_HOTFIX' postgres_port='5451' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='HOTFIX' mount_point='/mnt/provision/postgres_credit_HOTFIX' 
                       """
                 }
             )
@@ -78,11 +78,11 @@ pipeline {
             )
          }
       }
-      stage('Create VDB Groups BUGFIX and MASK') {
+      stage('Create VDB Groups HOTFIX and MASK') {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit create_vdb_group name='Bankapp_BUGFIX' vdb_ids='Postgres_bank_BUGFIX,Postgres_credit_BUGFIX'
+               /root/dct-toolkit create_vdb_group name='Bankapp_HOTFIX' vdb_ids='Postgres_bank_HOTFIX,Postgres_credit_HOTFIX'
                /root/dct-toolkit create_vdb_group name='Bankapp_MASK' vdb_ids='Postgres_bank_MASK,Postgres_credit_MASK'
             """
          }

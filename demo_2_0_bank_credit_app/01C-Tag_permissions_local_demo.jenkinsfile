@@ -1,0 +1,73 @@
+//
+// Pipeline to create local Demo tags, users, roles, access groups
+//
+// Demo:  Digital Bank Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Tagging engines') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_engine_tags engine_id=sourcecde tags location=on-prem environment=prod   
+               /root/dct-toolkit update_engine_auto_tagging_config engine_id=sourcecde --enable_engine_name custom_tags_to_add='[{"key": "location", "value": "on-prem"},{"key": "env", "value": "prod"}]'
+               /root/dct-toolkit create_engine_tags engine_id=targetcde tags location=cloud environment=nonprod   
+               /root/dct-toolkit update_engine_auto_tagging_config engine_id=targetcde --enable_engine_name custom_tags_to_add='[{"key": "location", "value": "cloud"},{"key": "env", "value": "nonprod"}]'
+               /root/dct-toolkit create_engine_tags engine_id=cce tags location=on-prem environment=prod   
+               /root/dct-toolkit update_engine_auto_tagging_config engine_id=cce --enable_engine_name  --enable_masking_environments --enable_masking_applications custom_tags_to_add='[{"key": "location", "value": "on-prem"},{"key": "env", "value": "prod"}]'
+               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Bank' 
+               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Credit' 
+            """
+         }
+      }       
+      stage('Tagging environments') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_environment_tags environment_id='Postgres Source 1' tags team=prod app=bank
+               /root/dct-toolkit create_environment_tags environment_id='Postgres Source 2' tags team=prod app=credit
+               /root/dct-toolkit create_environment_tags environment_id='Postgres Staging' tags team=prod app=bank
+               /root/dct-toolkit create_environment_tags environment_id='Postgres Staging' tags app=credit
+               /root/dct-toolkit create_environment_tags environment_id='Postgres Target' tags team=itqa app=bank
+               /root/dct-toolkit create_environment_tags environment_id='Postgres Target' tags app=credit
+               /root/dct-toolkit create_environment_tags environment_id='Postgres Target' tags team=dev
+            """
+         }
+      }       
+      stage('Tagging local VDBs') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_HOTFIX" tags team=prod app=bank
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_HOTFIX" tags team=prod app=credit
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_DEV" tags team=dev app=bank
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_DEV" tags team=dev app=credit
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_QA" tags team=itqa app=bank
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_QA" tags team=itqa app=credit
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_MASK" tags team=prod app=bank
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_MASK" tags team=prod app=credit
+            """
+         }
+      }       
+      stage('Tagging local VDB groups') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_HOTFIX" tags team=prod app=bank
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_HOTFIX" tags app=credit
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_DEV" tags team=dev app=bank
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_DEV" tags app=credit
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_QA" tags team=qa app=bank
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_QA" tags app=credit
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_MASK" tags team=prod app=bank
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_MASK" tags app=credit
+            """
+         }
+      }       
+   }
+}
