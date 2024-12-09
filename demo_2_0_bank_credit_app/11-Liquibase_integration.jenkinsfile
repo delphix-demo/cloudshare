@@ -1,4 +1,3 @@
-
 //
 // Delphix Postgres Liquibase Demo
 //
@@ -38,8 +37,9 @@ psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "alter table public.us
          steps {
             sh """
 printf "Use Liquibase to get delta between Postgres_DEV_lbase and Production\n"
-rm -f change.postgres.sql && /root/liquibase/liquibase --username=postgres --password=delphix --url=jdbc:postgresql://10.160.1.29:5432/digitalbank --referenceUsername=postgres --referencePassword=delphix --referenceUrl=jdbc:postgresql://10.160.1.74:5450/digitalbank --classpath=/root/liquibase/internal/lib/postgresql.jar --changeLogFile=/tmp/change.postgres.sql diffchangelog
-printf "These are metadata changes, produced by Liquibase in file change.postgres.sql\n"
+rm -f /tmp/change.postgres.sql
+/root/liquibase/liquibase --username=postgres --password=delphix --url=jdbc:postgresql://10.160.1.29:5432/digitalbank --referenceUsername=postgres --referencePassword=delphix --referenceUrl=jdbc:postgresql://10.160.1.74:5450/digitalbank --classpath=/root/liquibase/internal/lib/postgresql.jar --changeLogFile=/tmp/change.postgres.sql diffchangelog
+printf "These are metadata changes, produced by Liquibase in file /tmp/change.postgres.sql\n"
 cat /tmp/change.postgres.sql
             """
          }
