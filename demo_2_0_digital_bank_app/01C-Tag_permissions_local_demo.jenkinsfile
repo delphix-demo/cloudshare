@@ -20,8 +20,6 @@ pipeline {
                /root/dct-toolkit update_engine_auto_tagging_config engine_id=targetcde --enable_engine_name custom_tags_to_add='[{"key": "location", "value": "cloud"},{"key": "env", "value": "nonprod"}]'
                /root/dct-toolkit create_engine_tags engine_id=cce tags location=on-prem environment=prod   
                /root/dct-toolkit update_engine_auto_tagging_config engine_id=cce --enable_engine_name  --enable_masking_environments --enable_masking_applications custom_tags_to_add='[{"key": "location", "value": "on-prem"},{"key": "env", "value": "prod"}]'
-               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Bank' 
-               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Credit' 
             """
          }
       }       
