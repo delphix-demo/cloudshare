@@ -50,12 +50,12 @@ pipeline {
             parallel(
                 Create_HOTFIX_bank: {
                       sh """
-                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_bank' name='Postgres_bank_HOTFIX' postgres_port='5450' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='BUGFIX' mount_point='/mnt/provision/postgres_bank_HOTFIX' 
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_bank' name='Postgres_bank_HOTFIX' postgres_port='5450' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='Bugfix' mount_point='/mnt/provision/postgres_bank_HOTFIX' 
                       """
                 },
                 Create_HOTFIX_credit: {
                       sh """
-                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_credit' name='Postgres_credit_HOTFIX' postgres_port='5451' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='BUGFIX' mount_point='/mnt/provision/postgres_credit_HOTFIX' 
+                         /root/dct-toolkit provision_vdb_by_snapshot postgres source_data_id='Postgres_credit' name='Postgres_credit_HOTFIX' postgres_port='5451' environment_id='Postgres Staging' environment_user_id='postgres' --auto_select_repository target_group_id='Bugfix' mount_point='/mnt/provision/postgres_credit_HOTFIX' 
                       """
                 }
             )
