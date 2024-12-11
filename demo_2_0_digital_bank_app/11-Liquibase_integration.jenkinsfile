@@ -16,7 +16,7 @@ pipeline {
                /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_HOTFIX'
             """
             sh """
-                psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users"
+                psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users limit 10"
             """
          }
       }
@@ -28,7 +28,7 @@ psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "alter table public.us
  DEFAULT 'http://www.prova.com' NOT NULL"
             """
             sh """
-                psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users"
+                psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users limit 10"
             """
          }
       }
@@ -51,7 +51,7 @@ cat /tmp/change.postgres.sql
                /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_HOTFIX'
             """
             sh """
-               psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users"
+               psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users limit 10"
             """
          }
       }
@@ -62,7 +62,7 @@ cat /tmp/change.postgres.sql
                psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -f /tmp/change.postgres.sql
             """
             sh """
-               psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users"
+               psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users limit 10"
             """
          }
       }
