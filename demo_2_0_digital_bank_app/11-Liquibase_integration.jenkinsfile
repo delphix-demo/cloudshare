@@ -9,18 +9,18 @@
 pipeline {
    agent { label 'devops' }
    stages {
-      stage('Refresh BUGFIX from Prod') {
+      stage('Refresh HOTFIX from Prod') {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_BUGFIX'
+               /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_HOTFIX'
             """
             sh """
                 psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users"
             """
          }
       }
-      stage('Alter BUGFIX structure') {
+      stage('Alter HOTFIX structure') {
          agent { label 'devops' }
          steps {
             sh """
@@ -32,7 +32,7 @@ psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "alter table public.us
             """
          }
       }
-      stage('Get Delta between BUGFIX and Prod') {
+      stage('Get Delta between HOTFIX and Prod') {
          agent { label 'devops' }
          steps {
             sh """
@@ -44,11 +44,11 @@ cat /tmp/change.postgres.sql
             """
          }
       }
-      stage('Refresh BUGFIX with Prod - loose changes') {
+      stage('Refresh HOTFIX with Prod - loose changes') {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_BUGFIX'
+               /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='Bankapp_HOTFIX'
             """
             sh """
                psql -p 5450 -h 10.160.1.74 -d digitalbank -U postgres -c "select * from public.users"
