@@ -1,0 +1,74 @@
+//
+// Pipeline to Refresh Demo environment, showing Data Secure Delivery 
+//
+// Demo:  Multi-country VDB Masking Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Snap Sources') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Snap_source_bank: {
+                      sh """
+                         /root/dct-toolkit snapshot_dsource dsource_id='Postgres_database001' 
+                      """
+                },
+                Snap_source_credit: {
+                      sh """
+                         /root/dct-toolkit snapshot_dsource dsource_id='Postgres_database002' 
+                      """
+                }
+            )
+         }
+      }   
+      stage('Refresh MASK VDB Group from latest snapshot') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='App_MASK'
+            """
+         }
+      }   
+      stage('Run Masking jobs on MASK') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask database001' 
+               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask database002' 
+            """
+         }
+      }  
+      stage('Bookmark local MASK VDB Group') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_bookmark vdb_group_id='App_MASK' name="PIT \$(date -u)"
+            """
+         }
+      }
+
+      stage('Refresh DEV and QA VDB Groups with latest Bookmark') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Refresh_vdbroup_DEV: {
+                      sh """
+                         /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='App_DEV'
+                      """
+                },
+                Refresh_vdbgroup_QA: {
+                      sh """
+                         /root/dct-toolkit refresh_vdb_group_by_snapshot vdb_group_id='App_QA'
+                      """
+                }
+            )
+         }
+      }  
+   }
+}

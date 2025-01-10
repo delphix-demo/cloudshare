@@ -1,0 +1,44 @@
+//
+// Pipeline to destroy DCT environment
+//
+// Demo:  Multi-country VDB Masking Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Delete environments') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_source_1: {
+                      sh """
+                         /root/dct-toolkit delete_environment environment_id='Postgres Source 1' 
+                      """
+                },
+                Delete_source_2: {
+                      sh """
+                         /root/dct-toolkit delete_environment environment_id='Postgres Source 2' 
+                      """
+                },
+                Delete_staging: {
+                      sh """
+                         /root/dct-toolkit delete_environment environment_id='Postgres Staging' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Unregister engines from DCT') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                /root/dct-toolkit unregister_engine engine_id=sourcecde 
+                /root/dct-toolkit unregister_engine engine_id=cce 
+            """
+         }
+      }
+   }
+}

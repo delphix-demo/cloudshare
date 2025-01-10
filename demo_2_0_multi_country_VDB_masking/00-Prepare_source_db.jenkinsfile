@@ -1,0 +1,35 @@
+//
+// Pipeline to prepare Source DB for Demo
+//
+// Demo:  Multi-country VDB Masking Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Create source #1 DB tables') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb <<EOF 
+CREATE DATABASE database001;
+EOF
+"""
+         }
+      }
+      stage('Create source #2 DB tables') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            psql -p 5432 -h 10.160.1.30 -U postgres -d delphixdb <<EOF 
+CREATE DATABASE database002;
+EOF
+"""
+         }
+      }
+   }
+}

@@ -1,0 +1,52 @@
+//
+// Pipeline to Create DCT environment
+//
+// Demo:  Multi-country VDB Masking Demo 2.0
+//
+// 2024 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Register demo engines into DCT') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Register_source_cde: {
+                      sh """
+                         /root/dct-toolkit register_engine hostname=10.160.1.18 name=sourcecde username=admin password=Delphix_123! --insecure_ssl  
+                      """
+                },
+                Register_CCE: {
+                      sh """
+                         /root/dct-toolkit register_engine hostname=10.160.1.160 name=cce masking_username=admin masking_password=Delphix_123! --insecure_ssl 
+                      """
+                }
+            )
+         }
+      }
+      stage('Register local environments') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Register_postgres_source_1: {
+                      sh """
+                         /root/dct-toolkit create_environment engine_id="sourcecde" name="Postgres Source 1" os_name="UNIX" hostname="10.160.1.29" toolkit_path="/toolkit" username="postgres" password="Delphix_123!" description="Postgres source VM #1" 
+                         """
+                },
+                Register_postgres_source_2: {
+                      sh """
+                         /root/dct-toolkit create_environment engine_id="sourcecde" name="Postgres Source 2" os_name="UNIX" hostname="10.160.1.30" toolkit_path="/toolkit" username="postgres" password="Delphix_123!" description="Postgres source VM #2" 
+                         """
+                },
+                Register_postgres_staging: {
+                      sh """
+                         /root/dct-toolkit create_environment engine_id="sourcecde" name="Postgres Staging" os_name="UNIX" hostname="10.160.1.74" toolkit_path="/toolkit" username="postgres" password="Delphix_123!" description="Postgres staging VM"     
+                         """
+                }
+            )
+         }
+      }
+   }
+}
