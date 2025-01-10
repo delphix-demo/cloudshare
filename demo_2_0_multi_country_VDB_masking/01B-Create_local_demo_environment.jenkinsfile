@@ -33,12 +33,12 @@ pipeline {
             parallel(
                 Create_dsource_bank: {
                       sh """
-                         /root/dct-toolkit link_appdata_database source_id="Postgres_database001" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source 1" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_bank","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.29", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5433, "configSettingsStg":[]}' 
+                         /root/dct-toolkit link_appdata_database source_id="Postgres_database001" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source 1" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_database001","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.29", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5433, "configSettingsStg":[]}' 
                       """
                 },
                 Create_dsource_credit: {
                       sh """
-                         /root/dct-toolkit link_appdata_database source_id="Postgres_database002" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source 2" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_credit","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.30", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5434, "configSettingsStg":[]}' 
+                         /root/dct-toolkit link_appdata_database source_id="Postgres_database002" group_id="Source" link_type=AppDataStaged staging_environment="Postgres Source 2" environment_user="postgres" sync_parameters='{"resync": true}' parameters='{"mountLocation":"/mnt/provision/pg_database002","externalBackup":[], "delphixInitiatedBackupFlag":true, "privilegedOsUser":"", "delphixInitiatedBackup":[{"userName":"postgres","userPass":"Delphix_123!", "sourceHostAddress":"10.160.1.30", "postgresSourcePort":5432}], "singleDatabaseIngestionFlag":false,"singleDatabaseIngestion":[], "postgresPort":5434, "configSettingsStg":[]}' 
                       """
                 }
             )
@@ -91,8 +91,8 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Bank' 
-               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Credit' 
+               #/root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Bank' 
+               #/root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask Digital Credit' 
             """
          }
       }   
