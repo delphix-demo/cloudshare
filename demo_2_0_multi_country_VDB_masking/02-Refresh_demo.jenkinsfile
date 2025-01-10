@@ -39,8 +39,8 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask database001' 
-               /root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask database002' 
+               #/root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask database001' 
+               #/root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Mask database002' 
             """
          }
       }  
