@@ -31,7 +31,7 @@ pipeline {
                /root/dct-toolkit create_environment_tags environment_id='Postgres Source 2' tags team=prod app=credit
                /root/dct-toolkit create_environment_tags environment_id='Postgres Staging' tags team=prod app=bank
                /root/dct-toolkit create_environment_tags environment_id='Postgres Staging' tags app=credit
-               /root/dct-toolkit create_environment_tags environment_id='Postgres Target' tags team=itqa app=bank
+               /root/dct-toolkit create_environment_tags environment_id='Postgres Target' tags team=qa app=bank
                /root/dct-toolkit create_environment_tags environment_id='Postgres Target' tags app=credit
                /root/dct-toolkit create_environment_tags environment_id='Postgres Target' tags team=dev
             """
@@ -45,8 +45,8 @@ pipeline {
                /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_HOTFIX" tags team=prod app=credit
                /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_DEV" tags team=dev app=bank
                /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_DEV" tags team=dev app=credit
-               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_QA" tags team=itqa app=bank
-               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_QA" tags team=itqa app=credit
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_QA" tags team=qa app=bank
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_QA" tags team=qa app=credit
                /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_MASK" tags team=prod app=bank
                /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_MASK" tags team=prod app=credit
             """
