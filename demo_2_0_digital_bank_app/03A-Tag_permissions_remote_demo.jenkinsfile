@@ -16,6 +16,7 @@ pipeline {
             sh """
                export env_name="\$(/root/dct-toolkit search_environments name='Postgres Staging' --is_replica -js -jp 'items[0].id')"
                /root/dct-toolkit create_environment_tags environment_id=\${env_name} tags team=itqa app=bank
+               /root/dct-toolkit create_environment_tags environment_id=\${env_name} tags team=qa app=bank
                /root/dct-toolkit create_environment_tags environment_id=\${env_name} tags app=credit
             """
          }
@@ -26,12 +27,12 @@ pipeline {
             sh """
                /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_DEVR" tags team=dev app=bank
                /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_DEVR" tags team=dev app=credit
-               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_QAR" tags team=itqa app=bank
-               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_QAR" tags team=itqa app=credit
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_bank_QAR" tags team=qa app=bank
+               /root/dct-toolkit create_vdb_tags vdb_id="Postgres_credit_QAR" tags team=qa app=credit
                export vdb_name="\$(/root/dct-toolkit search_vdbs name='Postgres_bank_MASK' --is_replica -js -jp 'items[0].id')"
-               /root/dct-toolkit create_vdb_tags vdb_id=\${vdb_name} tags team=itqa app=bank
+               /root/dct-toolkit create_vdb_tags vdb_id=\${vdb_name} tags team=qa app=bank
                export vdb_name="\$(/root/dct-toolkit search_vdbs name='Postgres_credit_MASK' --is_replica -js -jp 'items[0].id')"
-               /root/dct-toolkit create_vdb_tags vdb_id=\${vdb_name} tags team=itqa app=credit
+               /root/dct-toolkit create_vdb_tags vdb_id=\${vdb_name} tags team=qa app=credit
             """
          }
       }       
