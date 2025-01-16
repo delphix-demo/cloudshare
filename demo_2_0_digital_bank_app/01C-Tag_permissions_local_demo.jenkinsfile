@@ -37,6 +37,15 @@ pipeline {
             """
          }
       }       
+      stage('Tagging dSources') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_tags_dsource dsource_id="Postgres_bank" tags team=prod app=bank
+               /root/dct-toolkit create_tags_dsource dsource_id="Postgres_credit" tags team=prod app=credit
+            """
+         }
+      }       
       stage('Tagging local VDBs') {
          agent { label 'devops' }
          steps {
@@ -57,13 +66,13 @@ pipeline {
          steps {
             sh """
                /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_HOTFIX" tags team=prod app=bank
-               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_HOTFIX" tags app=credit
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_HOTFIX" tags team=prod app=credit
                /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_DEV" tags team=dev app=bank
-               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_DEV" tags app=credit
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_DEV" tags team=dev app=credit
                /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_QA" tags team=qa app=bank
-               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_QA" tags app=credit
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_QA" tags team=qa app=credit
                /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_MASK" tags team=prod app=bank
-               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_MASK" tags app=credit
+               /root/dct-toolkit create_vdb_groups_tags vdb_group_id="Bankapp_MASK" tags team=prod app=credit
             """
          }
       }       
