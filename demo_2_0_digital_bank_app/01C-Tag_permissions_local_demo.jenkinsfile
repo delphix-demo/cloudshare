@@ -76,5 +76,58 @@ pipeline {
             """
          }
       }       
+      stage('Create DCT users') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_account username="dev" password="Delphix_123_2023" tags='team=dev'
+               /root/dct-toolkit create_account username="qa" password="Delphix_123_2023" tags='team=qa'
+               /root/dct-toolkit create_account username="prod" password="Delphix_123_2023" tags='team=prod'
+               /root/dct-toolkit create_account username="governance" password="Delphix_123_2023"
+            """
+         }
+      }       
+      stage('Create DCT roles') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_role name=reporting permission_objects='[ {"object_type" : "DSOURCE","permissions" : [ "READ" ]}, {"object_type" : "ENGINE","permissions" : [ "READ" ]}, {"object_type" :"STORAGE_SAVINGS_SUMMARY_REPORT","permissions" : [ "READ" ]}, {"object_type" : "STORAGE_SUMMARY_REPORT","permissions" : [ "READ" ]} ]'
+           """
+         }
+      }       
+      stage('Tailor user permissions') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               # remove the owner scope from 'governance user
+               export owner_scope_id="\$(/root/dct-toolkit get_access_group_scope access_group_id='governance' scope_id='owner' -js -jp 'id')"
+               /root/dct-toolkit remove_access_group_scope access_group_id="governance" scope_id=\${owner_scope_id}
+               # add reporting role to 'governance' user
+               /root/dct-toolkit add_access_group_scopes access_group_id='governance' scopes='[ {"name" : "reporting_permissions", "role_id" : "reporting", "scope_type" : "SIMPLE", "object_tags" : [], "objects" : [], "always_allowed_permissions" : []} ]'
+            """
+         }
+      } 
+      stage('Create DCT access groups') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               # create DEV access groups
+               /root/dct-toolkit create_access_group name="DEV_access_group" --no-single_account account_tags='[{"key": "team" , "value": "dev"}]' scopes='[{"name": "devops","scope_type": "SCOPED" , "role_id": "devops" , "object_tags": [{"key": "team" , "value": "dev"}],"objects": [] , "always_allowed_permissions": []}]'
+               # add reporting role 
+               /root/dct-toolkit add_access_group_scopes access_group_id='DEV_access_group' scopes='[ {"name" : "see-only", "role_id" : "monitoring", "scope_type" : "SIMPLE", "object_tags" : [], "objects" : [], "always_allowed_permissions" : []} ]'
+               #
+               # create QA access groups
+               /root/dct-toolkit create_access_group name="QA_access_group" --no-single_account account_tags='[{"key": "team" , "value": "qa"}]' scopes='[{"name": "devops" , "scope_type": "SCOPED" , "role_id": "devops" , "object_tags": [{"key": "team" , "value": "qa"}],"objects": [] , "always_allowed_permissions": []}]'
+               # 
+               # add reporting role 
+               /root/dct-toolkit add_access_group_scopes access_group_id='QA_access_group' scopes='[ {"name" : "see-only", "role_id" : "monitoring", "scope_type" : "SIMPLE", "object_tags" : [], "objects" : [], "always_allowed_permissions" : []} ]'
+               #
+               # create PROD access groups
+               /root/dct-toolkit create_access_group name="PROD_access_group" --no-single_account account_tags='[{"key": "team" , "value": "prod"}]' scopes='[{"name": "devops" , "scope_type": "SCOPED" , "role_id": "devops" , "object_tags": [{"key": "team" , "value": "prod"}],"objects": [] , "always_allowed_permissions": []}]'
+               # add reporting role 
+               /root/dct-toolkit add_access_group_scopes access_group_id='PROD_access_group' scopes='[ {"name" : "see-only", "role_id" : "monitoring", "scope_type" : "SIMPLE", "object_tags" : [], "objects" : [], "always_allowed_permissions" : []} ]'
+            """
+         }
+      } 
    }
 }

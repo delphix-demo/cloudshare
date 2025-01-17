@@ -46,5 +46,36 @@ pipeline {
             """
          }
       }
-   }
+      stage('Remove DCT access groups') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_access_group access_group_id="DEV_access_group"
+               /root/dct-toolkit delete_access_group access_group_id="QA_access_group"
+               /root/dct-toolkit delete_access_group access_group_id="PROD_access_group"
+            """
+         }
+      }
+      stage('Remove DCT accounts') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               export account_id="\$(/root/dct-toolkit search_accounts username="dev" -js -jp 'items[0]id')"
+               /root/dct-toolkit  delete_account id=\${account_id}
+               export account_id="\$(/root/dct-toolkit search_accounts username="qa" -js -jp 'items[0]id')"/root/dct-toolkit  delete_account id=${account_id}
+               export account_id="\$(/root/dct-toolkit search_accounts username="prod" -js -jp 'items[0]id')"
+               /root/dct-toolkit  delete_account id=\${account_id}
+               export account_id="\$(/root/dct-toolkit search_accounts username="governance" -js -jp 'items[0]id')"
+               /root/dct-toolkit  delete_account id=\${account_id}
+            """
+         }
+      }
+      stage('Remove DCT roles') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit delete_role role_id="reporting"
+            """
+         }
+      }   }
 }
