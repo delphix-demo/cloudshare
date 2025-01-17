@@ -111,20 +111,17 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               # create DEV access groups
+               # create DEV access group
                /root/dct-toolkit create_access_group name="DEV_access_group" --no-single_account account_tags='[{"key": "team" , "value": "dev"}]' scopes='[{"name": "devops","scope_type": "SCOPED" , "role_id": "devops" , "object_tags": [{"key": "team" , "value": "dev"}],"objects": [] , "always_allowed_permissions": []}]'
-               # add reporting role 
-               /root/dct-toolkit add_access_group_scopes access_group_id='DEV_access_group' scopes='[ {"name" : "see-only", "role_id" : "monitoring", "scope_type" : "SIMPLE", "object_tags" : [], "objects" : [], "always_allowed_permissions" : []} ]'
                #
-               # create QA access groups
+               # create QA access group
                /root/dct-toolkit create_access_group name="QA_access_group" --no-single_account account_tags='[{"key": "team" , "value": "qa"}]' scopes='[{"name": "devops" , "scope_type": "SCOPED" , "role_id": "devops" , "object_tags": [{"key": "team" , "value": "qa"}],"objects": [] , "always_allowed_permissions": []}]'
-               # 
-               # add reporting role 
+               # add monitoring role 
                /root/dct-toolkit add_access_group_scopes access_group_id='QA_access_group' scopes='[ {"name" : "see-only", "role_id" : "monitoring", "scope_type" : "SIMPLE", "object_tags" : [], "objects" : [], "always_allowed_permissions" : []} ]'
                #
-               # create PROD access groups
+               # create PROD access group
                /root/dct-toolkit create_access_group name="PROD_access_group" --no-single_account account_tags='[{"key": "team" , "value": "prod"}]' scopes='[{"name": "devops" , "scope_type": "SCOPED" , "role_id": "devops" , "object_tags": [{"key": "team" , "value": "prod"}],"objects": [] , "always_allowed_permissions": []}]'
-               # add reporting role 
+               # add monitoring role 
                /root/dct-toolkit add_access_group_scopes access_group_id='PROD_access_group' scopes='[ {"name" : "see-only", "role_id" : "monitoring", "scope_type" : "SIMPLE", "object_tags" : [], "objects" : [], "always_allowed_permissions" : []} ]'
             """
          }
