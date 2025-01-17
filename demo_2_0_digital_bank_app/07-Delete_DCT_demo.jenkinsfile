@@ -62,7 +62,8 @@ pipeline {
             sh """
                export account_id="\$(/root/dct-toolkit search_accounts username="dev" -js -jp 'items[0]id')"
                /root/dct-toolkit  delete_account id=\${account_id}
-               export account_id="\$(/root/dct-toolkit search_accounts username="qa" -js -jp 'items[0]id')"/root/dct-toolkit  delete_account id=${account_id}
+               export account_id="\$(/root/dct-toolkit search_accounts username="qa" -js -jp 'items[0]id')"
+               /root/dct-toolkit  delete_account id=\${account_id}
                export account_id="\$(/root/dct-toolkit search_accounts username="prod" -js -jp 'items[0]id')"
                /root/dct-toolkit  delete_account id=\${account_id}
                export account_id="\$(/root/dct-toolkit search_accounts username="governance" -js -jp 'items[0]id')"
