@@ -16,7 +16,7 @@ pipeline {
          steps {
             sh """
             psql -p 5432 -h 10.160.1.29 -U postgres -d delphixdb <<EOF 
-SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'database_name' AND pid <> pg_backend_pid();
+SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'digitalbank' AND pid <> pg_backend_pid();
 DROP DATABASE IF EXISTS digitalbank;
 DROP USER IF EXISTS digitaluser;
 EOF
@@ -28,7 +28,7 @@ EOF
          steps {
             sh """
             psql -p 5432 -h 10.160.1.30 -U postgres -d delphixdb <<EOF 
-SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'database_name' AND pid <> pg_backend_pid();
+SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = 'digitalcredit' AND pid <> pg_backend_pid();
 DROP DATABASE IF EXISTS digitalcredit;
 DROP USER IF EXISTS digitaluser;
 EOF
