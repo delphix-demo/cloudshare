@@ -1,0 +1,39 @@
+//
+// Pipeline to destroy DCT environment
+//
+// Demo:  MySQL Demo 2.0
+//
+// 2025 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Delete environments') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Delete_source: {
+                      sh """
+                         /root/dct-toolkit delete_environment environment_id='MySQL Source' 
+                      """
+                },
+                Delete_target: {
+                      sh """
+                         /root/dct-toolkit delete_environment environment_id='MySQL Staging' 
+                      """
+                }
+            )
+         }
+      }
+      stage('Unregister engines from DCT') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                /root/dct-toolkit unregister_engine engine_id=sourcecde 
+                /root/dct-toolkit unregister_engine engine_id=cce 
+            """
+         }
+      }
+   }
+}

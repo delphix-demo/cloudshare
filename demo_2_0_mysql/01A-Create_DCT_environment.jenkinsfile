@@ -1,0 +1,51 @@
+//
+// Pipeline to Create DCT environment
+//
+// Demo:  MySQL Demo 2.0
+//
+// 2025 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   environment {
+      RPWD = credentials('Root_pwd')
+   }
+   stages {
+      stage('Register demo engines into DCT') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Register_source_cde: {
+                      sh """
+                         /root/dct-toolkit register_engine hostname=10.160.1.18 name=sourcecde username=admin password=\$RPWD --insecure_ssl  
+                      """
+                },
+                Register_CCE: {
+                      sh """
+                         /root/dct-toolkit register_engine hostname=10.160.1.160 name=cce masking_username=admin masking_password=\$RPWD --insecure_ssl 
+                      """
+                }
+            )
+         }
+      }
+      stage('Register local environments') {
+         agent { label 'devops' }
+         steps {
+            parallel(
+                Register_mysql_source: {
+                      sh """
+                         /root/dct-toolkit create_environment engine_id="sourcecde" name="MySQL Source" os_name="UNIX" hostname="10.160.3.20" toolkit_path="/toolkit" username="delphix" password="\$RPWD" description="MySQL source VM" 
+                         """
+                },
+                Register_postgres_target: {
+                      sh """
+                         /root/dct-toolkit create_environment engine_id="sourcecde" name="MySQL Staging" os_name="UNIX" hostname="10.160.3.30" toolkit_path="/toolkit" username="delphix" password="\$RPWD" description="MySQL staging VM"     
+                         """
+                }
+            )
+         }
+      }
+   }
+}

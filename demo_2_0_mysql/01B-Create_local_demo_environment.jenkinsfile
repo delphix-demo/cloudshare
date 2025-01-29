@@ -1,0 +1,89 @@
+//
+// Pipeline to create local Demo environment
+//
+// Demo:  MySQL Demo 2.0
+//
+// 2025 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   environment {
+      RPWD = credentials('Root_pwd')
+   }
+   stages {
+      stage('Create MySQL Source') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit create_app_data_source name="mysql_source" environment_id="MySQL8SRC" repository_id="(MySQL Community Server - GPL) 8.0.30" type="STAGED" engine_id="CDE" parameters='{"dbName": "mysql_source", "port": 3306, "dataDir": "/var/lib/mysql", "baseDir": "/usr"}'
+            """
+         }
+      }
+      stage('Link Dsource') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit link_appdata_database name="mysql_master" source_id="mysql_source" group_id="Source" link_type=AppDataStaged staging_environment="MySQL Source" environment_user="delphix" sync_parameters='{"resync": true}' parameters='{"dSourceType": "Staging Push", "mountPath": "/mnt/provision/my_staging", "serverId": 109, "sourcePass": "mysql", "sourceUser": "mysql", "stagingBasedir": "/usr", "stagingPass": "\$RPWD", "stagingPort": 3308}'
+            """
+         }
+      }
+      stage('Create local BUGFIX VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot appdata source_data_id='mysql_master' name='mysql_BUGFIX' environment_id='MySQL Staging' environment_user_id='delphix' --auto_select_repository target_group_id='Bugfix' appdata_source_params='{"vdbUser": "mysql", "vdbPass": "mysql", "baseDir": "/usr", "port": 3310, "serverId": 110, "mPath": "/mnt/provision/mysql_BUGFIX"}'
+            """
+         }
+      }
+      stage('Create local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot appdata source_data_id='mysql_master' name='mysql_MASK' environment_id='MySQL Staging' environment_user_id='delphix' --auto_select_repository target_group_id='MaskGC' appdata_source_params='{"vdbUser": "mysql", "vdbPass": "mysql", "baseDir": "/usr", "port": 3311, "serverId": 111, "mPath": "/mnt/provision/mysql_MASK"}'
+            """
+         }
+      }
+      stage('Run Masking job (dummy)') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               #/root/dct-toolkit execute_masking_job engine_id=cce masking_job_id='Masking_MySQL' 
+            """
+         }
+      }   
+      stage('Snap local MASK VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit snapshot_vdb vdb_id='MySQL_MASK'                       
+            """
+         }
+      }   
+      stage('Show masked rows MASK vs BUGFIX') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            """
+         }
+      } 
+      stage('Create local DEV VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+                /root/dct-toolkit provision_vdb_by_snapshot appdata source_data_id='mysql_MASK' name='mysql_DEV' environment_id='MySQL Staging' environment_user_id='delphix' --auto_select_repository target_group_id='DEV' appdata_source_params='{"vdbUser": "mysql", "vdbPass": "mysql", "baseDir": "/usr", "port": 3312, "serverId": 112, "mPath": "/mnt/provision/mysql_DEV"}'
+               """
+         }
+      }  
+      stage('Create local QA VDB') {
+         agent { label 'devops' }
+         steps {
+            sh """
+               /root/dct-toolkit provision_vdb_by_snapshot appdata source_data_id='mysql_MASK' name='mysql_QA' environment_id='MySQL Staging' environment_user_id='delphix' --auto_select_repository target_group_id='QA' appdata_source_params='{"vdbUser": "mysql", "vdbPass": "mysql", "baseDir": "/usr", "port": 3313, "serverId": 113, "mPath": "/mnt/provision/mysql_QA"}'
+            """
+         }
+      }
+    
+   }
+}

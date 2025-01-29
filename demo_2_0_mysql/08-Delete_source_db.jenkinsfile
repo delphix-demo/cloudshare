@@ -1,0 +1,29 @@
+//
+// Pipeline to Delete Source DB for Demo
+//
+// Demo:  MySQL Demo 2.0
+//
+// 2025 (c) Delphix - Matteo Ferrari (matteo.ferrari@delphix.com)
+//
+//
+
+pipeline {
+
+   agent { label 'devops' }
+   stages {
+      stage('Delete source #1 DB tables') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            """
+         }
+      }
+      stage('Delete source #2 DB tables') {
+         agent { label 'devops' }
+         steps {
+            sh """
+            """
+         }
+      }
+   }
+}
