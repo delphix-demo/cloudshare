@@ -17,7 +17,7 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit create_app_data_source name="mysql_source" environment_id="MySQL Source" repository_id="(MySQL Community Server - GPL) 8.0.30" type="STAGED" engine_id="CDE" parameters='{"dbName": "mysql_source", "port": 3306, "dataDir": "/var/lib/mysql", "baseDir": "/usr"}'
+               /root/dct-toolkit create_app_data_source name="mysql_source" environment_id="MySQL Source" repository_id="(MySQL Community Server - GPL) 8.0.30" type="STAGED" engine_id="sourcecde" parameters='{"dbName": "mysql_source", "port": 3306, "dataDir": "/var/lib/mysql", "baseDir": "/usr"}'
             """
          }
       }
