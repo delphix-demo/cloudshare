@@ -57,7 +57,7 @@ pipeline {
          agent { label 'devops' }
          steps {
             sh """
-               /root/dct-toolkit snapshot_vdb vdb_id='MySQL_MASK'                       
+               /root/dct-toolkit snapshot_vdb vdb_id='mysql_MASK'                       
             """
          }
       }   
